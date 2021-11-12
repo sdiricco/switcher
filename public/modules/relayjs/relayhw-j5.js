@@ -1,7 +1,7 @@
 const five = require("johnny-five");
 const EventEmitter = require("events");
 
-const TIMEOUT_CONNECT_MS = 2000;
+const TIMEOUT_CONNECT_MS = 10000;
 const ARDUINO_NANO_MAX_PIN = 19;
 
 const OUT = five.Pin.OUTPUT;
@@ -61,13 +61,13 @@ class RelayBoardHw extends EventEmitter {
 
         //Event "fail", failed to connect.
         //Typically when you try to open a connection to a board but it is
-        //not connected to the usb port or when the board does not have
-        //the correct firmware
+        //not connected to the usb port or the board does not have the correct
+        //firmware
         this.__fiveboard.on("fail", (e) => {
           this.emit("error", {
             type: "CONNECTION_FAILED",
             message: `Connection Failed. Check the hardware configuration`,
-            details: e.message,
+            details: `Event 'fail': ${e.message}`,
           });
           rej(false);
         });

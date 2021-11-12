@@ -153,8 +153,12 @@ class RelayJs extends EventEmitter {
   }
 
   async connect(options = undefined) {
-    await this.__relayBoardHw.connect(options);
-    this.__port = this.__relayBoardHw.__port;
+    try {
+      await this.__relayBoardHw.connect(options);
+      this.__port = this.__relayBoardHw.__port;
+    } catch (e) {
+      console.log(e.message);
+    }
   }
 
   async set(n = undefined, value = undefined) {
