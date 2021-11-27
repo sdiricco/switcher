@@ -1,10 +1,12 @@
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
-const { RelayJs } = require("./modules/relayjs/relayjs");
+const { RelayJs } = require("@sdiricco/relayjs");
 
 let mainWindow = null;
 const gotTheLock = app.requestSingleInstanceLock();
+
+const RELAY_MODULE = 1;
 
 const showMessageBox = (options) => {
   let __options = {
@@ -92,90 +94,85 @@ function createWindow() {
 
 ////////////////////////////////////////// handle Relaysjs \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-let relayjs = undefined;
+let relayjs = new RelayJs();
+
+let __rlyState = () =>{
+  return{
+    connected: relayjs.connected,
+    port: relayjs.port,
+    relays: relayjs.relays
+  }
+}
 
 //on error event
-let onRelayJsError = async(e) => {
-  let res = await requestReleyJsState();
-  console.log("electronMain", e);
-  mainWindow.webContents.send("relayjs-error", e, res);
+let sendRlyError = (e) => {
+
+    let error = "";
+    if (e && e.type) {
+      //from error event
+      error = e.message;
+    } else{
+      //from catch in try-catch stameants
+      error = e;
+    }
+
+    mainWindow.webContents.send("relayjs-error", error);
+    sendRlyState();
 };
 
-//on update state event
-let onReleyJsUpdate = (data) => {
-  console.log(data);
-  mainWindow.webContents.send("update-relayjs-state", data);
-};
-
-//request state
-let requestReleyJsState = async () => {
-  const res = {
-    info: {
-      port: "",
-      connected: false,
-    },
-    relays: [],
-  };
-  if (!(relayjs instanceof RelayJs)) {
-    return res;
-  }
-  res.relays = await relayjs.getAll();
-  res.info.port = relayjs.port;
-  res.info.connected = relayjs.__relayBoardHw.isConnected;
-  return res;
+let sendRlyState = (e) => {
+  mainWindow.webContents.send("relayjs-updatestate", __rlyState());
 };
 
 //connect 
-ipcMain.handle("connect", async (event, data) => {
-  let res = await requestReleyJsState();
-  if (res.info.connected) {
-    onReleyJsUpdate(res);
-    return true;
-  }
+ipcMain.handle("relayjs-connect", async (event, data) => {
   try {
-    relayjs = new RelayJs({
-      relayCount: 16,
-    });
     await relayjs.connect();
-    relayjs.on("error", (e) => {
-      onRelayJsError(e);
-    });
-    const res = await requestReleyJsState();
-    onReleyJsUpdate(res);
-  } catch (e) {
+    console.log(relayjs.relays)
+    relayjs.on("error", sendRlyError)
+    sendRlyState();
+  } catch (error) {
     console.log(e);
-    onRelayJsError(e);
+    sendRlyError(e);
     return false;
   }
   return true;
 });
 
-
-//set relay
-ipcMain.handle("set-relay", async (event, i, v) => {
-  let relays = [];
+//connect 
+ipcMain.handle("relayjs-disconnect", async (event, data) => {
   try {
-    await relayjs.set(i, v);
-    relays = await relayjs.getAll();
-    const res = await requestReleyJsState();
-    onReleyJsUpdate(res);
-  } catch (e) {
-    onRelayJsError(e.message);
-    return [];
+    await relayjs.disconnect();
+    relayjs.on("error", sendRlyError)
+    sendRlyState();
+  } catch (error) {
+    console.log(e);
+    sendRlyError(e);
+    return false;
   }
-  return relays;
+  return true;
 });
 
-//get-state
-ipcMain.handle("get-state", async (event, data) => {
-  let res = undefined;
-  if (data === undefined) {
-    try {
-      const res = await requestReleyJsState();
-      onReleyJsUpdate(res);
-    } catch (e) {
-      onRelayJsError(e.message);
-    }
+ipcMain.handle("relayjs-write", async (event, relay, value) => {
+  try {
+    await relayjs.write(relay, value)
+    sendRlyState();
+  } catch (e) {
+    console.log(e);
+    sendRlyError(e);
+    return false;
   }
-  return res;
+  return true;
+});
+
+ipcMain.handle("relayjs-getstate", (event, data) => {
+  return __rlyState();
+});
+
+ipcMain.handle("relayjs-getrelay", (event, relay) => {
+  return relayjs.relays[relay];
+});
+
+ipcMain.handle("relayjs-getrelays", (event) => {
+  return relayjs.relays;
 });

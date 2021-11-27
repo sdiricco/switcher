@@ -27,10 +27,8 @@ class App extends React.Component {
     super(props);
     this.props = props;
     this.state = {
-      info: {
-        port: "",
-        connected: false,
-      },
+      connected: false,
+      port: "",
       loading: false,
       error: false,
       errorTxt: "",
@@ -40,58 +38,51 @@ class App extends React.Component {
     this.connect = this.connect.bind(this);
     this.disconnect = this.disconnect.bind(this);
     this.onClickSwitch = this.onClickSwitch.bind(this);
-    this.onRelayJsError = this.onRelayJsError.bind(this);
-    this.onUpdateRelayJsState = this.onUpdateRelayJsState.bind(this);
+    this.onRlyError = this.onRlyError.bind(this);
+    this.onRlyUpdate = this.onRlyUpdate.bind(this);
   }
 
-  onRelayJsError(event, error, data) {
+  onRlyError(event, error) {
     console.log(error);
-    console.log(data);
     this.setState({
-      info: data.info,
-      relays: data.relays,
       error: true,
-      errorTxt: error.message,
+      errorTxt: error,
     });
   }
 
-  onUpdateRelayJsState(event, data) {
-    console.log(data);
+  onRlyUpdate(event, state) {
+    console.log(state);
     this.setState({
-      info: data.info,
-      relays: data.relays,
+      connected: state.connected,
+      port: state.port,
+      relays: state.relays
     });
   }
 
-  async onClickSwitch(el) {
+  async onClickSwitch(el, idx) {
     if (this.state.isbusy) {
       return;
     }
     this.setState({
       isbusy: true,
     });
-    let relays = this.state.relays;
-    const value = Number(!el.value);
-    await ipcRenderer.invoke("set-relay", el.pin, value);
-    const idx = relays.findIndex((__el) => __el.pin === el.pin);
-    if (idx > -1) {
-      relays[idx].value = value;
-    }
+    const value = Number(!el.state);
+    await ipcRenderer.invoke("relayjs-write", idx, value);
     this.setState({
-      relays: relays,
       isbusy: false,
     });
   }
 
   async connect(){
-    await ipcRenderer.invoke("connect");
-    ipcRenderer.on("relayjs-error", this.onRelayJsError);
-    ipcRenderer.on("update-relayjs-state", this.onUpdateRelayJsState);
+    await ipcRenderer.invoke("relayjs-connect");
+    ipcRenderer.on("relayjs-error", this.onRlyError);
+    ipcRenderer.on("relayjs-updatestate", this.onRlyUpdate);
   }
 
   async disconnect(){
-    ipcRenderer.off("relayjs-error", this.onRelayJsError);
-    ipcRenderer.off("update-relayjs-state", this.onUpdateRelayJsState);
+    await ipcRenderer.invoke("relayjs-disconnect")
+    ipcRenderer.off("relayjs-error", this.onRlyError);
+    ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
   }
 
   async componentDidMount() {
@@ -134,19 +125,19 @@ class App extends React.Component {
 
     //Relay component
     let relays = null;
-    if (!this.state.error) {
-      relays = this.state.relays.map((el) => {
+    if (!this.state.error && this.state.relays && this.state.relays.length) {
+      relays = this.state.relays.map((el, idx) => {
         return (
           <div style={{ textAlign: "center" }}>
-            <Typography style={{ color: "#fefefe" }}>{el.pin}</Typography>
+            <Typography style={{ color: "#fefefe" }}>{idx}</Typography>
             <Switch
               checked={el.value}
-              disabled={!this.state.info.connected || this.state.isbusy}
+              disabled={!this.state.connected || this.state.isbusy}
               style={{ margin: "4px" }}
-              key={`sw__${el.pin}`}
+              key={`sw__${idx}`}
               onChange={async () => {
                 console.log("on change");
-                await this.onClickSwitch(el);
+                await this.onClickSwitch(el, idx);
               }}
             ></Switch>
           </div>
@@ -156,14 +147,14 @@ class App extends React.Component {
 
     //state footer component
     let footer = null;
-    if (this.state.info.connected) {
+    if (this.state.connected) {
       footer = (
         <Row gutter={8}>
           <Col className="gutter-row">
             <CheckCircleFilled style={{ color: "#52c41a" }} />
           </Col>
           <Col className="gutter-row">
-            <Typography>{this.state.info.port}</Typography>
+            <Typography>{this.state.port}</Typography>
           </Col>
         </Row>
       );
