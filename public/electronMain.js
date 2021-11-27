@@ -93,9 +93,6 @@ function createWindow() {
 }
 
 ////////////////////////////////////////// handle Relaysjs \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-
-let relayjs = new RelayJs();
-
 let __rlyState = () =>{
   return{
     connected: relayjs.connected,
@@ -106,63 +103,64 @@ let __rlyState = () =>{
 
 //on error event
 let sendRlyError = (e) => {
-
-    let error = "";
-    if (e && e.type) {
-      //from error event
-      error = e.message;
-    } else{
-      //from catch in try-catch stameants
-      error = e;
-    }
-
-    mainWindow.webContents.send("relayjs-error", error);
-    sendRlyState();
+  const rlyState = __rlyState();
+  mainWindow.webContents.send("relayjs-error", e, rlyState);
 };
 
-let sendRlyState = (e) => {
-  mainWindow.webContents.send("relayjs-updatestate", __rlyState());
+let sendRlyState = () => {
+  const rlyState = __rlyState();
+  mainWindow.webContents.send("relayjs-updatestate", rlyState);
 };
+
+let relayjs = new RelayJs();
+relayjs.on("error", sendRlyError)
 
 //connect 
 ipcMain.handle("relayjs-connect", async (event, data) => {
-  try {
-    await relayjs.connect();
-    console.log(relayjs.relays)
-    relayjs.on("error", sendRlyError)
-    sendRlyState();
-  } catch (error) {
-    console.log(e);
-    sendRlyError(e);
-    return false;
+  const ret = {
+    success: false,
+    error: ""
   }
-  return true;
+  try {
+    ret.success = await relayjs.connect();
+    console.log(relayjs.relays)
+    sendRlyState();
+  } catch (e) {
+    ret.success = false;
+    ret.error(e)
+  }
+  return ret;
 });
 
 //connect 
 ipcMain.handle("relayjs-disconnect", async (event, data) => {
-  try {
-    await relayjs.disconnect();
-    relayjs.on("error", sendRlyError)
-    sendRlyState();
-  } catch (error) {
-    console.log(e);
-    sendRlyError(e);
-    return false;
+  const ret = {
+    success: false,
+    error: ""
   }
-  return true;
+  try {
+    ret.success = await relayjs.disconnect();
+    sendRlyState();
+  } catch (e) {
+    ret.success = false;
+    ret.error = e
+  }
+  return ret;
 });
 
 ipcMain.handle("relayjs-write", async (event, relay, value) => {
+  const ret = {
+    success: false,
+    error: ""
+  }
   try {
-    await relayjs.write(relay, value)
+    ret.success = await relayjs.write(relay, value)
     sendRlyState();
   } catch (e) {
-    console.log(e);
-    sendRlyError(e);
-    return false;
+    ret.success = false;
+    ret.error = e;
   }
-  return true;
+  return ret;
 });
 
 ipcMain.handle("relayjs-getstate", (event, data) => {
@@ -173,6 +171,6 @@ ipcMain.handle("relayjs-getrelay", (event, relay) => {
   return relayjs.relays[relay];
 });
 
-ipcMain.handle("relayjs-getrelays", (event) => {
+ipcMain.handle("relayjs-getrelays", (event, data) => {
   return relayjs.relays;
 });

@@ -21,6 +21,9 @@ import "./App.less";
 
 const { Header, Footer, Sider, Content } = Layout;
 const { ipcRenderer } = window.require("electron");
+const OPEN = 0;
+const CLOSE = 1;
+
 
 class App extends React.Component {
   constructor(props) {
@@ -38,25 +41,34 @@ class App extends React.Component {
     this.connect = this.connect.bind(this);
     this.disconnect = this.disconnect.bind(this);
     this.onClickSwitch = this.onClickSwitch.bind(this);
+    this.onClickConnect = this.onClickConnect.bind(this)
     this.onRlyError = this.onRlyError.bind(this);
     this.onRlyUpdate = this.onRlyUpdate.bind(this);
   }
 
-  onRlyError(event, error) {
-    console.log(error);
+  async onRlyError(event, e, rlyState) {
+    console.log(e);
     this.setState({
       error: true,
-      errorTxt: error,
+      errorTxt: e.message,
+      connected: rlyState.connected,
+      port: rlyState.port,
+      relays: rlyState.relays,
     });
   }
 
-  onRlyUpdate(event, state) {
-    console.log(state);
+  onRlyUpdate(event, rlyState) {
+    console.log(rlyState);
     this.setState({
-      connected: state.connected,
-      port: state.port,
-      relays: state.relays
+      connected: rlyState.connected,
+      port: rlyState.port,
+      relays: rlyState.relays,
     });
+  }
+
+  async onClickConnect(){
+    const res = await this.connect();
+    console.log(res);
   }
 
   async onClickSwitch(el, idx) {
@@ -66,29 +78,33 @@ class App extends React.Component {
     this.setState({
       isbusy: true,
     });
-    const value = Number(!el.state);
-    await ipcRenderer.invoke("relayjs-write", idx, value);
+    const isOpen = Boolean(el.state);
+    const res = await ipcRenderer.invoke("relayjs-write", idx, Number(!isOpen));
+    console.log(res)
     this.setState({
       isbusy: false,
     });
   }
 
   async connect(){
-    await ipcRenderer.invoke("relayjs-connect");
-    ipcRenderer.on("relayjs-error", this.onRlyError);
-    ipcRenderer.on("relayjs-updatestate", this.onRlyUpdate);
+    const res = await ipcRenderer.invoke("relayjs-connect");
+    console.log(res)
   }
 
   async disconnect(){
-    await ipcRenderer.invoke("relayjs-disconnect")
-    ipcRenderer.off("relayjs-error", this.onRlyError);
-    ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
+    const res = await ipcRenderer.invoke("relayjs-disconnect");
+    console.log(res)
+
   }
 
   async componentDidMount() {
     this.setState({
       loading: true,
     });
+    ipcRenderer.off("relayjs-error", this.onRlyError);
+    ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
+    ipcRenderer.on("relayjs-error", this.onRlyError);
+    ipcRenderer.on("relayjs-updatestate", this.onRlyUpdate);
     await this.connect();
     this.setState({
       loading: false,
@@ -96,6 +112,8 @@ class App extends React.Component {
   }
 
   async componentWillUnmount(){
+    ipcRenderer.off("relayjs-error", this.onRlyError);
+    ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
     await this.disconnect();
   }
 
@@ -113,6 +131,12 @@ class App extends React.Component {
               {this.state.errorTxt}
             </Marquee>
           }
+          closable
+          afterClose={()=>{
+            this.setState({
+              error: false
+            })
+          }}
         />
       );
     }
@@ -125,18 +149,17 @@ class App extends React.Component {
 
     //Relay component
     let relays = null;
-    if (!this.state.error && this.state.relays && this.state.relays.length) {
+    if (this.state.relays && this.state.relays.length) {
       relays = this.state.relays.map((el, idx) => {
         return (
-          <div style={{ textAlign: "center" }}>
-            <Typography style={{ color: "#fefefe" }}>{idx}</Typography>
+          <div key={`div_${idx}`} style={{ textAlign: "center" }}>
+            <Typography key={`ty__${idx}`} style={{ color: "#fefefe" }}>{idx}</Typography>
             <Switch
               checked={el.value}
               disabled={!this.state.connected || this.state.isbusy}
               style={{ margin: "4px" }}
               key={`sw__${idx}`}
               onChange={async () => {
-                console.log("on change");
                 await this.onClickSwitch(el, idx);
               }}
             ></Switch>
@@ -163,7 +186,7 @@ class App extends React.Component {
       footer = (
         <Row gutter={8}>
           <Col className="gutter-row">
-            <ExclamationCircleFilled style={{ color: "#eb2f96" }} />
+            <ExclamationCircleFilled style={{ color: "#a61d24" }} />
           </Col>
           <Col className="gutter-row">
             <Typography>Disconnected</Typography>
@@ -175,14 +198,12 @@ class App extends React.Component {
     return (
       <Layout className="layout">
         <Content className="content">
-          <Button onClick={this.connect}>connect</Button>
+          <Button onClick={this.onClickConnect}>connect</Button>
           {spinner}
           <div className="relayContainer">{relays}</div>
           {alert}
         </Content>
-        <Footer className="footer">{footer}
-
-        </Footer>
+        <Footer className="footer">{footer}</Footer>
       </Layout>
     );
   }
