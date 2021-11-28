@@ -146,10 +146,8 @@ class App extends React.Component {
     );
 
     //Alert component
-    let alert = null;
     const antIcon = <LoadingOutlined style={{ fontSize: 24 }} spin />;
-    if (!this.state.connected && !this.state.loading) {
-      alert = (
+    let  alert = (
         <Alert
           type="error"
           banner
@@ -167,18 +165,13 @@ class App extends React.Component {
           }}
         />
       );
-    }
 
     //Spin component
-    let spinner = null;
-    if (this.state.loading) {
-      spinner = <Spin indicator={antIcon} tip="Connecting..." />;
-    }
+    let spinner = <Spin indicator={antIcon} tip="Connecting..." />;
+
 
     //Relay component
-    let relays = null;
-    if (this.state.relays && this.state.relays.length) {
-      relays = this.state.relays.map((el, idx) => {
+    let relays = this.state.relays.map((el, idx) => {
         return (
           <div key={`div_${idx}`} style={{ textAlign: "center" }}>
             <Row gutter={8}>
@@ -205,7 +198,6 @@ class App extends React.Component {
           </div>
         );
       });
-    }
 
     //state footer component
     let footer = null;
@@ -233,13 +225,20 @@ class App extends React.Component {
       );
     }
 
+    let internalContent = null;
+    if (this.state.loading && !this.state.connected) {
+      internalContent = spinner;
+    }else if(this.state.connected && !this.state.loading){
+      internalContent = relays;
+    }else if(!this.state.connected && !this.state.loading){
+      internalContent = alert; 
+    }
+
     return (
       <Layout className="layout">
         <Header className="header">{header}</Header>
         <Content className="content">
-          {spinner}
-          <div className="relayContainer">{relays}</div>
-          {alert}
+          <div className="internalContent">{internalContent}</div>
         </Content>
         <Footer className="footer">{footer}</Footer>
       </Layout>
