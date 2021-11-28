@@ -57,7 +57,7 @@ function createWindow() {
     minWidth: 600,
     minHeight: 200,
     show: true,
-    title: "Example",
+    title: "Relay App",
     webPreferences: {
       nodeIntegration: true,
       enableRemoteModule: true,
@@ -93,57 +93,63 @@ function createWindow() {
 }
 
 ////////////////////////////////////////// handle Relaysjs \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-let __rlyState = () =>{
-  return{
+let __rlyState = () => {
+  return {
     connected: relayjs.connected,
     port: relayjs.port,
-    relays: relayjs.relays
-  }
-}
-
-//on error event
-let sendRlyError = (e) => {
-  const rlyState = __rlyState();
-  mainWindow.webContents.send("relayjs-error", e, rlyState);
+    relays: relayjs.relays,
+  };
 };
 
-let sendRlyState = () => {
+let sendRlyState = (e) => {
+  const defaultError = {
+    type: "",
+    message: "",
+    details: "",
+  };
+  const error = e ? e : defaultError;
   const rlyState = __rlyState();
-  mainWindow.webContents.send("relayjs-updatestate", rlyState);
+  mainWindow.webContents.send("relayjs-updatestate", error, rlyState);
 };
 
-let relayjs = new RelayJs();
-relayjs.on("error", sendRlyError)
+let relayjs = new RelayJs({
+  inverseOut: true,
+});
+relayjs.on("error", sendRlyState);
 
-//connect 
+//connect
 ipcMain.handle("relayjs-connect", async (event, data) => {
   const ret = {
     success: false,
-    error: ""
-  }
+    error: "",
+  };
   try {
     ret.success = await relayjs.connect();
-    console.log(relayjs.relays)
+    console.log(relayjs.relays);
     sendRlyState();
   } catch (e) {
     ret.success = false;
-    ret.error(e)
+    ret.error = e;
   }
   return ret;
 });
 
-//connect 
+//connect
 ipcMain.handle("relayjs-disconnect", async (event, data) => {
   const ret = {
     success: false,
-    error: ""
-  }
+    error: "",
+  };
   try {
     ret.success = await relayjs.disconnect();
-    sendRlyState();
+    sendRlyState({
+      type: "",
+      message: "Board disconnected",
+      details: "",
+    });
   } catch (e) {
     ret.success = false;
-    ret.error = e
+    ret.error = e;
   }
   return ret;
 });
@@ -151,10 +157,10 @@ ipcMain.handle("relayjs-disconnect", async (event, data) => {
 ipcMain.handle("relayjs-write", async (event, relay, value) => {
   const ret = {
     success: false,
-    error: ""
-  }
+    error: "",
+  };
   try {
-    ret.success = await relayjs.write(relay, value)
+    ret.success = await relayjs.write(relay, value);
     sendRlyState();
   } catch (e) {
     ret.success = false;

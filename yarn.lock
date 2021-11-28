@@ -1705,19 +1705,19 @@
     "estree-walker" "^1.0.1"
     "picomatch" "^2.2.2"
 
-"@sdiricco/boardjs@^0.2.5":
-  "integrity" "sha512-1XeqYK8tJYlZ1PZJz/fO/mjtM0GzBxrh3HzxJNl00NXFCtSNzf0wajT3hE7T7evBwKeMozAMAEEAqm9Exuoy9w=="
-  "resolved" "https://registry.npmjs.org/@sdiricco/boardjs/-/boardjs-0.2.5.tgz"
-  "version" "0.2.5"
+"@sdiricco/boardjs@^0.2.6":
+  "integrity" "sha512-Ooq7kdXbWr3g2jJXDviXQLWfqL69sEGP9ezc7QGnmt0YiBlNDMIQHER3qO2KuuJ1pI3VQo7zcghk7OEFXOUsvQ=="
+  "resolved" "https://registry.npmjs.org/@sdiricco/boardjs/-/boardjs-0.2.6.tgz"
+  "version" "0.2.6"
   dependencies:
     "firmata" "^2.3.0"
 
-"@sdiricco/relayjs@^0.0.5":
-  "integrity" "sha512-iltjnagr/GlMIme2UUXhJ3SJUG9Ahw3ghkvpVUT8GpQ3nbW5vL6sLLtKETR5VTuE0EnBSSlUJzuCHRJSMWqYjg=="
-  "resolved" "https://registry.npmjs.org/@sdiricco/relayjs/-/relayjs-0.0.5.tgz"
-  "version" "0.0.5"
+"@sdiricco/relayjs@^0.0.7":
+  "integrity" "sha512-uETsxrs2S0xRxaGwOowwoouN3F/Q2yGvo4OvjqSw4cmoYXf/I204lnPJZgsoMC2ixDOqTAMMn2vnbsrx441daw=="
+  "resolved" "https://registry.npmjs.org/@sdiricco/relayjs/-/relayjs-0.0.7.tgz"
+  "version" "0.0.7"
   dependencies:
-    "@sdiricco/boardjs" "^0.2.5"
+    "@sdiricco/boardjs" "^0.2.6"
 
 "@serialport/binding-abstract@^8.0.6":
   "integrity" "sha512-1swwUVoRyQ9ubxrkJ8JPppykohUpTAP4jkGr36e9NjbVocSPfqeX6tFZFwl/IdUlwJwxGdbKDqq7FvXniCQUMw=="

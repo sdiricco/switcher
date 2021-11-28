@@ -15,6 +15,8 @@ import {
   ExclamationCircleFilled,
   CheckCircleFilled,
   LoadingOutlined,
+  ApiOutlined,
+  DisconnectOutlined,
 } from "@ant-design/icons";
 
 import "./App.less";
@@ -24,7 +26,6 @@ const { ipcRenderer } = window.require("electron");
 const OPEN = 0;
 const CLOSE = 1;
 
-
 class App extends React.Component {
   constructor(props) {
     super(props);
@@ -33,41 +34,38 @@ class App extends React.Component {
       connected: false,
       port: "",
       loading: false,
-      error: false,
-      errorTxt: "",
+      eMessage: "",
       relays: [],
       isbusy: false,
     };
     this.connect = this.connect.bind(this);
     this.disconnect = this.disconnect.bind(this);
     this.onClickSwitch = this.onClickSwitch.bind(this);
-    this.onClickConnect = this.onClickConnect.bind(this)
-    this.onRlyError = this.onRlyError.bind(this);
+    this.onClickConnect = this.onClickConnect.bind(this);
+    this.onClickDisconnect = this.onClickDisconnect.bind(this);
     this.onRlyUpdate = this.onRlyUpdate.bind(this);
   }
 
-  async onRlyError(event, e, rlyState) {
+  onRlyUpdate(event, e, rlyState) {
     console.log(e);
-    this.setState({
-      error: true,
-      errorTxt: e.message,
-      connected: rlyState.connected,
-      port: rlyState.port,
-      relays: rlyState.relays,
-    });
-  }
-
-  onRlyUpdate(event, rlyState) {
     console.log(rlyState);
     this.setState({
+      eMessage: e.message,
       connected: rlyState.connected,
       port: rlyState.port,
       relays: rlyState.relays,
     });
   }
 
-  async onClickConnect(){
+  async onClickConnect() {
+    console.log("clicked connect");
     const res = await this.connect();
+    console.log(res);
+  }
+
+  async onClickDisconnect() {
+    console.log("clicked disconnect");
+    const res = await this.disconnect();
     console.log(res);
   }
 
@@ -80,62 +78,92 @@ class App extends React.Component {
     });
     const isOpen = Boolean(el.state);
     const res = await ipcRenderer.invoke("relayjs-write", idx, Number(!isOpen));
-    console.log(res)
+    console.log(res);
     this.setState({
       isbusy: false,
     });
   }
 
-  async connect(){
-    const res = await ipcRenderer.invoke("relayjs-connect");
-    console.log(res)
-  }
-
-  async disconnect(){
-    const res = await ipcRenderer.invoke("relayjs-disconnect");
-    console.log(res)
-
-  }
-
-  async componentDidMount() {
+  async connect() {
     this.setState({
       loading: true,
     });
-    ipcRenderer.off("relayjs-error", this.onRlyError);
-    ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
-    ipcRenderer.on("relayjs-error", this.onRlyError);
-    ipcRenderer.on("relayjs-updatestate", this.onRlyUpdate);
-    await this.connect();
+    const res = await ipcRenderer.invoke("relayjs-connect");
+    console.log(res);
     this.setState({
       loading: false,
     });
   }
 
-  async componentWillUnmount(){
-    ipcRenderer.off("relayjs-error", this.onRlyError);
+  async disconnect() {
+    const res = await ipcRenderer.invoke("relayjs-disconnect");
+    console.log(res);
+  }
+
+  async componentDidMount() {
+    ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
+    ipcRenderer.on("relayjs-updatestate", this.onRlyUpdate);
+    await this.connect();
+  }
+
+  async componentWillUnmount() {
     ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
     await this.disconnect();
   }
 
   render() {
+    //Header
+    let header = null;
+    let headerButton = null;
+    if (this.state.connected) {
+      headerButton = (
+        <Button
+          disabled={this.state.loading}
+          type="text"
+          onClick={this.onClickDisconnect}
+        >
+          <DisconnectOutlined />
+          Disconnect
+        </Button>
+      );
+    } else {
+      headerButton = (
+        <Button
+          disabled={this.state.loading}
+          type="text"
+          onClick={this.onClickConnect}
+        >
+          <ApiOutlined />
+          Connect
+        </Button>
+      );
+    }
+
+    header = (
+      <Row gutter={8}>
+        <Col className="gutter-row">{headerButton}</Col>
+      </Row>
+    );
+
     //Alert component
     let alert = null;
     const antIcon = <LoadingOutlined style={{ fontSize: 24 }} spin />;
-    if (this.state.error) {
+    if (!this.state.connected && !this.state.loading) {
       alert = (
         <Alert
           type="error"
           banner
-          message={
+          message="Error"
+          description={
             <Marquee pauseOnHover gradient={false}>
-              {this.state.errorTxt}
+              {this.state.eMessage}
             </Marquee>
           }
           closable
-          afterClose={()=>{
+          afterClose={() => {
             this.setState({
-              error: false
-            })
+              error: false,
+            });
           }}
         />
       );
@@ -153,16 +181,27 @@ class App extends React.Component {
       relays = this.state.relays.map((el, idx) => {
         return (
           <div key={`div_${idx}`} style={{ textAlign: "center" }}>
-            <Typography key={`ty__${idx}`} style={{ color: "#fefefe" }}>{idx}</Typography>
-            <Switch
-              checked={el.value}
-              disabled={!this.state.connected || this.state.isbusy}
-              style={{ margin: "4px" }}
-              key={`sw__${idx}`}
-              onChange={async () => {
-                await this.onClickSwitch(el, idx);
-              }}
-            ></Switch>
+            <Row gutter={8}>
+              <Col className="gutter-row">
+                <Switch
+                  checked={el.value}
+                  disabled={!this.state.connected || this.state.isbusy}
+                  style={{ margin: "4px" }}
+                  key={`sw__${idx}`}
+                  onChange={async () => {
+                    await this.onClickSwitch(el, idx);
+                  }}
+                ></Switch>
+              </Col>
+              <Col className="gutter-row">
+                <Typography key={`ty__${idx}`} style={{ color: "#fefefe" }}>
+                  {(idx+1).toString().padStart(2, '0')}
+                </Typography>
+              </Col>
+              <Col className="gutter-row">
+                <Input placeholder="label" key={`ty__${idx}`} style={{ color: "#fefefe" }}/>
+              </Col>
+            </Row>
           </div>
         );
       });
@@ -181,8 +220,7 @@ class App extends React.Component {
           </Col>
         </Row>
       );
-    }
-    else{
+    } else {
       footer = (
         <Row gutter={8}>
           <Col className="gutter-row">
@@ -197,8 +235,8 @@ class App extends React.Component {
 
     return (
       <Layout className="layout">
+        <Header className="header">{header}</Header>
         <Content className="content">
-          <Button onClick={this.onClickConnect}>connect</Button>
           {spinner}
           <div className="relayContainer">{relays}</div>
           {alert}

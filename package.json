@@ -6,7 +6,7 @@
     "@ant-design/icons": "^4.7.0",
     "@craco/craco": "^6.2.0",
     "@electron/remote": "^1.0.2",
-    "@sdiricco/relayjs": "^0.0.5",
+    "@sdiricco/relayjs": "^0.0.7",
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
@@ -31,8 +31,8 @@
     "prettier": "^2.2.1",
     "wait-on": "^5.2.1"
   },
-  "productName": "Example boilerplate",
-  "description": "Example boilerplate for react, ant design, electron",
+  "productName": "Relay App",
+  "description": "",
   "main": "public/electronMain.js",
   "homepage": "./",
   "scripts": {

@@ -1,4 +1,4 @@
 # Reactron - Relay board
 
-![](./images/app.png)
+![](./images/RelayB.png)
 
