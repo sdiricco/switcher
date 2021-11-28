@@ -128,6 +128,11 @@ ipcMain.handle("relayjs-connect", async (event, data) => {
     console.log(relayjs.relays);
     sendRlyState();
   } catch (e) {
+    sendRlyState({
+      type: "",
+      message: e.message,
+      details: "",
+    });
     ret.success = false;
     ret.error = e;
   }

@@ -50,7 +50,7 @@ class App extends React.Component {
     console.log(e);
     console.log(rlyState);
     this.setState({
-      eMessage: e.message,
+      eMessage: `${e.message}. ${e.details}`,
       connected: rlyState.connected,
       port: rlyState.port,
       relays: rlyState.relays,
