@@ -160,7 +160,7 @@ class App extends React.Component {
     this.setState({
       loading: true,
     });
-    if (this.state.connectMode === AUTO) {
+    if (this.state.connectMode === MANUAL) {
       port = this.state.port;
     }
     const res = await ipcRenderer.invoke("relayjs:connect", port);
@@ -260,11 +260,6 @@ class App extends React.Component {
           </Marquee>
         }
         closable
-        afterClose={() => {
-          this.setState({
-            error: false,
-          });
-        }}
       />
     );
 
