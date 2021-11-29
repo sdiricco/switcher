@@ -27,6 +27,8 @@ const { Header, Footer, Sider, Content } = Layout;
 const { ipcRenderer } = window.require("electron");
 const OPEN = 0;
 const CLOSE = 1;
+const AUTO = 'auto';
+const MANUAL = 'manual';
 
 class App extends React.Component {
   constructor(props) {
@@ -40,10 +42,13 @@ class App extends React.Component {
       relays: [],
       isbusy: false,
       labels: [],
+      usbDevices: [],
+      connectMode: AUTO
     };
 
     this.timeoutId = undefined;
 
+    this.onUpdateUsbDevices = this.onUpdateUsbDevices.bind(this);
     this.onChangeLabel = this.onChangeLabel.bind(this);
     this.saveAppConfig = this.saveAppConfig.bind(this);
     this.getAppConfig = this.getAppConfig.bind(this);
@@ -53,6 +58,28 @@ class App extends React.Component {
     this.onClickConnect = this.onClickConnect.bind(this);
     this.onClickDisconnect = this.onClickDisconnect.bind(this);
     this.onRlyUpdate = this.onRlyUpdate.bind(this);
+  }
+
+  onChangeUsbPort(e){
+    let connectMode = this.state.connectMode;
+    let port = this.state.port
+    if (e.target.value === AUTO) {
+      connectMode = AUTO;
+    }
+    else{
+      connectMode = MANUAL;
+      port = e.target.value
+    }
+    this.setState({
+      connectMode: connectMode,
+      port: port
+    })
+  }
+
+  onUpdateUsbDevices(event, usbDevices){
+    this.setState({
+      usbDevices: usbDevices
+    })
   }
 
   onChangeLabel(e, idx) {
@@ -129,10 +156,15 @@ class App extends React.Component {
   }
 
   async connect() {
+    let port = undefined;
     this.setState({
       loading: true,
     });
-    const res = await ipcRenderer.invoke("relayjs-connect");
+    if (this.state.connectMode === AUTO) {
+      port = this.state.port;
+    }
+    const res = await ipcRenderer.invoke("relayjs:connect", port);
+
     this.setState({
       loading: false,
     });
@@ -143,14 +175,25 @@ class App extends React.Component {
     console.log(res);
   }
 
+  async getUsbDevices(){
+    const usbDevices = await ipcRenderer.invoke("utils:get-usb-devices");
+    this.setState({
+      usbDevices: usbDevices
+    })
+  }
+
   async componentDidMount() {
+    ipcRenderer.off("utils:update-usb-devices", this.onUpdateUsbDevices)
     ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
     ipcRenderer.on("relayjs-updatestate", this.onRlyUpdate);
+    ipcRenderer.on("utils:update-usb-devices", this.onUpdateUsbDevices)
+    await this.getUsbDevices();
     await this.getAppConfig();
     await this.connect();
   }
 
   async componentWillUnmount() {
+    ipcRenderer.off("utils:update-usb-devices", this.onUpdateUsbDevices)
     ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
     await this.saveAppConfig();
     await this.disconnect();
@@ -191,10 +234,13 @@ class App extends React.Component {
             defaultValue="auto"
             style={{ width: 120 }}
             bordered={true}
-            onClick={this.onClick}
+            onChange={this.onChangeUsbDevice}            
           >
             <Option value="auto">Auto</Option>
-            <Option value="usb_1">dev/ttyUSB0</Option>
+            {this.state.usbDevices.map((device, i)=>{
+              return <Option key={`usb_${i}`} value={device.port}>{device.port}</Option>
+            })}
+            
           </Select>
         </Col>
         <Col className="gutter-row">{headerButton}</Col>

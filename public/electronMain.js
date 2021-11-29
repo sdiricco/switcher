@@ -8,7 +8,8 @@ const {
 const path = require("path");
 const isDev = require("electron-is-dev");
 const { RelayJs } = require("@sdiricco/relayjs");
-const { existsFile, loadJSON, saveJSON } = require("./modules/utils/utils");
+const { existsFile, loadJSON, saveJSON, getUsbDevices } = require("./modules/utils/utils");
+const usbDetect = require("usb-detection");
 
 let mainWindow = null;
 const gotTheLock = app.requestSingleInstanceLock();
@@ -128,13 +129,13 @@ let relayjs = new RelayJs({
 relayjs.on("error", sendRlyState);
 
 //connect
-ipcMain.handle("relayjs-connect", async (event, data) => {
+ipcMain.handle("relayjs:connect", async (event, data) => {
   const ret = {
     success: false,
     error: "",
   };
   try {
-    ret.success = await relayjs.connect();
+    ret.success = await relayjs.connect(data);
     console.log(relayjs.relays);
     sendRlyState();
   } catch (e) {
@@ -198,6 +199,17 @@ ipcMain.handle("relayjs-getrelays", (event, data) => {
 
 ////////////////////////////////////////// utils \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
+usbDetect.startMonitoring();
+usbDetect.on("change", async () => {
+  const devices = await getUsbDevices();
+  mainWindow.webContents.send("utils:update-usb-devices", devices);
+});
+
+ipcMain.handle("utils:get-usb-devices", async(event, data) => {
+  const devices = await getUsbDevices();
+  return devices;
+})
+
 ipcMain.handle("utils:get-app-conf", async (event, data) => {
   const res = {
     success: false,
@@ -217,7 +229,7 @@ ipcMain.handle("utils:get-app-conf", async (event, data) => {
     res.error = e.message;
     res.success = false;
   }
-  console.log(res)
+  console.log(res);
   return res;
 });
 
@@ -228,7 +240,7 @@ ipcMain.handle("utils:save-app-conf", async (event, jsonObj) => {
     data: {},
   };
   try {
-    console.log(APP_CONFIG_PATH)
+    console.log(APP_CONFIG_PATH);
     await saveJSON(APP_CONFIG_PATH, jsonObj);
     ret.success = true;
   } catch (e) {

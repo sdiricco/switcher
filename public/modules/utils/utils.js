@@ -1,5 +1,7 @@
 const fs = require("fs").promises;
 const path = require("path");
+const SerialPort = require("serialport");
+
 
 /**
  * Saves a JSON object to file.
@@ -54,4 +56,18 @@ const existsFile = async (file) => {
   return true;
 };
 
-module.exports = {existsFile, loadJSON, saveJSON}
+const getUsbDevices = async() =>{
+  const spdevices = await SerialPort.list();
+  console.log(spdevices)
+  const devices = spdevices
+    .map((device) => {
+      return {
+        name: device.manufacturer,
+        port: device.path,
+      };
+    })
+    .filter((device) => device.name);
+  return devices;
+}
+
+module.exports = {existsFile, loadJSON, saveJSON, getUsbDevices}
