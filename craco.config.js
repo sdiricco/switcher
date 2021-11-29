@@ -8,7 +8,7 @@ module.exports = {
         lessLoaderOptions: {
           lessOptions: {
             //https://github.com/ant-design/ant-design/blob/master/components/style/themes/default.less
-            modifyVars: { '@layout-header-height': 'none' },
+            modifyVars: { '@layout-header-height': 'none', '@btn-padding-horizontal-base': '0px' },
             javascriptEnabled: true,
           },
         },

@@ -10,6 +10,7 @@ import {
   Col,
   Spin,
   Alert,
+  Select,
 } from "antd";
 import {
   ExclamationCircleFilled,
@@ -21,6 +22,7 @@ import {
 
 import "./App.less";
 
+const { Option } = Select;
 const { Header, Footer, Sider, Content } = Layout;
 const { ipcRenderer } = window.require("electron");
 const OPEN = 0;
@@ -37,7 +39,14 @@ class App extends React.Component {
       eMessage: "",
       relays: [],
       isbusy: false,
+      labels: [],
     };
+
+    this.timeoutId = undefined;
+
+    this.onChangeLabel = this.onChangeLabel.bind(this);
+    this.saveAppConfig = this.saveAppConfig.bind(this);
+    this.getAppConfig = this.getAppConfig.bind(this);
     this.connect = this.connect.bind(this);
     this.disconnect = this.disconnect.bind(this);
     this.onClickSwitch = this.onClickSwitch.bind(this);
@@ -46,9 +55,44 @@ class App extends React.Component {
     this.onRlyUpdate = this.onRlyUpdate.bind(this);
   }
 
+  onChangeLabel(e, idx) {
+    let labels = this.state.labels;
+    if (!labels.length) {
+      labels = this.state.relays.map(() => "");
+    }
+    labels[idx] = e.target.value;
+
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+    }
+    this.timeoutId = setTimeout(async () => {
+      await this.saveAppConfig();
+    }, 1000);
+    this.setState({
+      labels: labels,
+    });
+  }
+
+  async saveAppConfig() {
+    const appConfig = {
+      labels: this.state.labels,
+    };
+    const res = await ipcRenderer.invoke("utils:save-app-conf", appConfig);
+    console.log(res);
+  }
+
+  async getAppConfig() {
+    const res = await ipcRenderer.invoke("utils:get-app-conf");
+    console.log("res.data.labels", res.data.labels);
+    this.setState({
+      labels: res.data.labels,
+    });
+  }
+
   onRlyUpdate(event, e, rlyState) {
     console.log(e);
     console.log(rlyState);
+
     this.setState({
       eMessage: `${e.message}. ${e.details}`,
       connected: rlyState.connected,
@@ -89,7 +133,6 @@ class App extends React.Component {
       loading: true,
     });
     const res = await ipcRenderer.invoke("relayjs-connect");
-    console.log(res);
     this.setState({
       loading: false,
     });
@@ -103,11 +146,13 @@ class App extends React.Component {
   async componentDidMount() {
     ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
     ipcRenderer.on("relayjs-updatestate", this.onRlyUpdate);
+    await this.getAppConfig();
     await this.connect();
   }
 
   async componentWillUnmount() {
     ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
+    await this.saveAppConfig();
     await this.disconnect();
   }
 
@@ -141,63 +186,81 @@ class App extends React.Component {
 
     header = (
       <Row gutter={8}>
+        <Col>
+          <Select
+            defaultValue="auto"
+            style={{ width: 120 }}
+            bordered={true}
+            onClick={this.onClick}
+          >
+            <Option value="auto">Auto</Option>
+            <Option value="usb_1">dev/ttyUSB0</Option>
+          </Select>
+        </Col>
         <Col className="gutter-row">{headerButton}</Col>
       </Row>
     );
 
     //Alert component
     const antIcon = <LoadingOutlined style={{ fontSize: 24 }} spin />;
-    let  alert = (
-        <Alert
-          type="error"
-          banner
-          message="Error"
-          description={
-            <Marquee pauseOnHover gradient={false}>
-              {this.state.eMessage}
-            </Marquee>
-          }
-          closable
-          afterClose={() => {
-            this.setState({
-              error: false,
-            });
-          }}
-        />
-      );
+    let alert = (
+      <Alert
+        type="error"
+        banner
+        message="Error"
+        description={
+          <Marquee pauseOnHover gradient={false}>
+            {this.state.eMessage}
+          </Marquee>
+        }
+        closable
+        afterClose={() => {
+          this.setState({
+            error: false,
+          });
+        }}
+      />
+    );
 
     //Spin component
     let spinner = <Spin indicator={antIcon} tip="Connecting..." />;
 
-
     //Relay component
     let relays = this.state.relays.map((el, idx) => {
-        return (
-          <div key={`div_${idx}`} style={{ textAlign: "center" }}>
-            <Row gutter={8}>
-              <Col className="gutter-row">
-                <Switch
-                  checked={el.value}
-                  disabled={!this.state.connected || this.state.isbusy}
-                  style={{ margin: "4px" }}
-                  key={`sw__${idx}`}
-                  onChange={async () => {
-                    await this.onClickSwitch(el, idx);
-                  }}
-                ></Switch>
-              </Col>
-              <Col className="gutter-row">
-                <Typography key={`ty__${idx}`} style={{ color: "#fefefe" }}>
-                  {(idx+1).toString().padStart(2, '0')}
-                </Typography>
-              </Col>
-              <Col className="gutter-row">
-                <Input placeholder="label" key={`ty__${idx}`} style={{ color: "#fefefe" }}/>
-              </Col>
-            </Row>
-          </div>
-        );
-      });
+      return (
+        <div key={`div_${idx}`} style={{ textAlign: "center" }}>
+          <Row gutter={8}>
+            <Col className="gutter-row">
+              <Switch
+                checked={el.value}
+                disabled={!this.state.connected || this.state.isbusy}
+                style={{ margin: "4px" }}
+                key={`sw__${idx}`}
+                onChange={async () => {
+                  await this.onClickSwitch(el, idx);
+                }}
+              ></Switch>
+            </Col>
+            <Col className="gutter-row">
+              <Typography key={`ty__${idx}`} style={{ color: "#fefefe" }}>
+                {(idx + 1).toString().padStart(2, "0")}
+              </Typography>
+            </Col>
+            <Col className="gutter-row">
+              <Input
+                value={this.state.labels[idx]}
+                placeholder="label"
+                key={`ty__${idx}`}
+                style={{ color: "#fefefe" }}
+                onChange={(e) => {
+                  this.onChangeLabel(e, idx);
+                }}
+              />
+            </Col>
+          </Row>
+        </div>
+      );
+    });
 
     //state footer component
     let footer = null;
@@ -228,10 +291,10 @@ class App extends React.Component {
     let internalContent = null;
     if (this.state.loading && !this.state.connected) {
       internalContent = spinner;
-    }else if(this.state.connected && !this.state.loading){
+    } else if (this.state.connected && !this.state.loading) {
       internalContent = relays;
-    }else if(!this.state.connected && !this.state.loading){
-      internalContent = alert; 
+    } else if (!this.state.connected && !this.state.loading) {
+      internalContent = alert;
     }
 
     return (

@@ -1,11 +1,20 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  dialog,
+  ipcRenderer,
+} = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
 const { RelayJs } = require("@sdiricco/relayjs");
+const { existsFile, loadJSON, saveJSON } = require("./modules/utils/utils");
 
 let mainWindow = null;
 const gotTheLock = app.requestSingleInstanceLock();
-
+const APP_PATH = app.getPath("appData");
+const APP_CONFIG_PATH = path.join(APP_PATH, "relayjs-data", "config.json");
+console.log(APP_CONFIG_PATH);
 const RELAY_MODULE = 1;
 
 const showMessageBox = (options) => {
@@ -54,7 +63,7 @@ if (!gotTheLock) {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    minWidth: 600,
+    minWidth: 400,
     minHeight: 200,
     show: true,
     title: "Relay App",
@@ -93,6 +102,7 @@ function createWindow() {
 }
 
 ////////////////////////////////////////// handle Relaysjs \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
 let __rlyState = () => {
   return {
     connected: relayjs.connected,
@@ -184,4 +194,46 @@ ipcMain.handle("relayjs-getrelay", (event, relay) => {
 
 ipcMain.handle("relayjs-getrelays", (event, data) => {
   return relayjs.relays;
+});
+
+////////////////////////////////////////// utils \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+ipcMain.handle("utils:get-app-conf", async (event, data) => {
+  const res = {
+    success: false,
+    error: "",
+    data: {},
+  };
+  try {
+    const isAppConfExsist = await existsFile(APP_CONFIG_PATH);
+    if (!isAppConfExsist) {
+      res.success = false;
+      return res;
+    }
+    const jsonObj = await loadJSON(APP_CONFIG_PATH);
+    res.success = true;
+    res.data = jsonObj;
+  } catch (e) {
+    res.error = e.message;
+    res.success = false;
+  }
+  console.log(res)
+  return res;
+});
+
+ipcMain.handle("utils:save-app-conf", async (event, jsonObj) => {
+  const ret = {
+    success: false,
+    error: "",
+    data: {},
+  };
+  try {
+    console.log(APP_CONFIG_PATH)
+    await saveJSON(APP_CONFIG_PATH, jsonObj);
+    ret.success = true;
+  } catch (e) {
+    ret.success = false;
+    ret.error = e.message;
+  }
+  return ret;
 });
