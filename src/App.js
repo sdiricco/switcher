@@ -24,7 +24,6 @@ import "./App.less";
 
 import Relay from "./components/Relay";
 import AppFooter from "./components/AppFooter";
-import AppHeader from "./components/AppHeader";
 import { placeholder } from "@babel/types";
 
 const { Option } = Select;
@@ -222,53 +221,6 @@ class App extends React.Component {
 
   render() {
 
-    let usbDevices = this.state.usbDevices.map((device) => {
-      return {
-        value: device.port,
-        label: device.port,
-      };
-    });
-
-    //menu of options button
-    const optionsMenu = [
-      {
-        value: "open",
-        label: "Open..",
-      },
-      {
-        value: "save",
-        label: "Save",
-      },
-      {
-        value: "save-as",
-        label: "Save as..",
-      },
-      {
-        value: "port",
-        label: "Port",
-        children: [
-          {
-            value: "auto",
-            label: "Auto",
-          },
-          ...usbDevices,
-        ],
-      },
-    ];
-
-    //header elements
-    const entries = [
-      {
-        label: "Options",
-        menu: optionsMenu,
-      },
-    ];
-
-    //header
-    let header = (
-      <AppHeader entries={entries} onChange={this.onChangeOptionsMenu} />
-    );
-
     //Header
     let toolbar = null;
     let headerButton = null;
@@ -387,7 +339,6 @@ class App extends React.Component {
 
     return (
       <Layout className="layout">
-        <Header className={`header menu`}>{header}</Header>
         <Content className="content">
           <Header className={`header headerContent`}>{toolbar}</Header>
           <div className="contentWrapper">

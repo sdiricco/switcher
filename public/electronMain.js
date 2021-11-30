@@ -4,6 +4,7 @@ const {
   ipcMain,
   dialog,
   ipcRenderer,
+  Menu
 } = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
@@ -17,6 +18,107 @@ const APP_PATH = app.getPath("appData");
 const APP_CONFIG_PATH = path.join(APP_PATH, "relayjs-data", "config.json");
 console.log(APP_CONFIG_PATH);
 const RELAY_MODULE = 1;
+
+const isMac = process.platform === 'darwin'
+
+const template = [
+  // { role: 'appMenu' }
+  ...(isMac ? [{
+    label: app.name,
+    submenu: [
+      { role: 'about' },
+      { type: 'separator' },
+      { role: 'services' },
+      { type: 'separator' },
+      { role: 'hide' },
+      { role: 'hideOthers' },
+      { role: 'unhide' },
+      { type: 'separator' },
+      { role: 'quit' }
+    ]
+  }] : []),
+  // { role: 'fileMenu' }
+  {
+    label: 'File',
+    submenu: [
+      { label: 'Open' },
+      { type: 'separator' },
+      { label: 'Save' },
+      { label: 'Save as..' },
+      { type: 'separator' },
+      isMac ? { role: 'close' } : { role: 'quit' }
+    ]
+  },
+  // { role: 'editMenu' }
+  {
+    label: 'Edit',
+    submenu: [
+      { role: 'undo' },
+      { role: 'redo' },
+      { type: 'separator' },
+      { role: 'cut' },
+      { role: 'copy' },
+      { role: 'paste' },
+      ...(isMac ? [
+        { role: 'pasteAndMatchStyle' },
+        { role: 'delete' },
+        { role: 'selectAll' },
+        { type: 'separator' },
+        {
+          label: 'Speech',
+          submenu: [
+            { role: 'startSpeaking' },
+            { role: 'stopSpeaking' }
+          ]
+        }
+      ] : [
+        { role: 'delete' },
+        { type: 'separator' },
+        { role: 'selectAll' }
+      ])
+    ]
+  },
+  // { role: 'viewMenu' }
+  {
+    label: 'View',
+    submenu: [
+      { role: 'reload' },
+      { role: 'forceReload' },
+      { role: 'toggleDevTools' },
+      { type: 'separator' },
+      { role: 'resetZoom' },
+      { role: 'zoomIn' },
+      { role: 'zoomOut' },
+      { type: 'separator' },
+      { role: 'togglefullscreen' }
+    ]
+  },
+  // { role: 'windowMenu' }
+  {
+    label: 'Window',
+    submenu: [
+      { role: 'minimize' },
+      { role: 'zoom' },
+      ...(isMac ? [
+        { type: 'separator' },
+        { role: 'front' },
+        { type: 'separator' },
+        { role: 'window' }
+      ] : [
+        { role: 'close' }
+      ])
+    ]
+  },
+  {
+    role: 'help',
+    submenu: [
+      {
+        label: 'Learn More',
+        click: ()=>{console.log('hello')}
+      }
+    ]
+  }
+]
 
 const showMessageBox = (options) => {
   let __options = {
@@ -85,11 +187,13 @@ function createWindow() {
     if (isDev) {
       mainWindow.toggleDevTools();
     }
+    const menu = Menu.buildFromTemplate(template)
+    Menu.setApplicationMenu(menu)
   });
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
-  mainWindow.removeMenu();
+  /* mainWindow.removeMenu(); */
 
   if (isDev) {
     const {
@@ -101,6 +205,11 @@ function createWindow() {
       .catch((err) => console.log("An error occurred: ", err));
   }
 }
+
+
+
+
+
 
 ////////////////////////////////////////// handle Relaysjs \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
