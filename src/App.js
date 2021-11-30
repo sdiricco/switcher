@@ -22,13 +22,21 @@ import {
 
 import "./App.less";
 
+import Relay from "./components/Relay";
+import AppFooter from "./components/AppFooter";
+import AppHeader from "./components/AppHeader";
+import { placeholder } from "@babel/types";
+
 const { Option } = Select;
 const { Header, Footer, Sider, Content } = Layout;
 const { ipcRenderer } = window.require("electron");
 const OPEN = 0;
 const CLOSE = 1;
-const AUTO = 'auto';
-const MANUAL = 'manual';
+
+const OPTIONS_PORT = "port";
+
+const AUTO = "auto";
+const MANUAL = "manual";
 
 class App extends React.Component {
   constructor(props) {
@@ -43,11 +51,12 @@ class App extends React.Component {
       isbusy: false,
       labels: [],
       usbDevices: [],
-      connectMode: AUTO
+      connectMode: AUTO,
     };
 
     this.timeoutId = undefined;
 
+    this.onChangeOptionsMenu = this.onChangeOptionsMenu.bind(this);
     this.onUpdateUsbDevices = this.onUpdateUsbDevices.bind(this);
     this.onChangeLabel = this.onChangeLabel.bind(this);
     this.saveAppConfig = this.saveAppConfig.bind(this);
@@ -60,26 +69,38 @@ class App extends React.Component {
     this.onRlyUpdate = this.onRlyUpdate.bind(this);
   }
 
-  onChangeUsbPort(e){
-    let connectMode = this.state.connectMode;
-    let port = this.state.port
-    if (e.target.value === AUTO) {
-      connectMode = AUTO;
+  async onChangeOptionsMenu(tree) {
+    console.log(tree);
+    const entry = tree[0];
+    switch (entry) {
+      case OPTIONS_PORT:
+        console.log(tree[1]);
+        this.onChangeUsbPort(tree[1]);
+        break;
+      default:
+        break;
     }
-    else{
+  }
+
+  onChangeUsbPort(opt) {
+    let connectMode = this.state.connectMode;
+    let port = this.state.port;
+    if (opt === AUTO) {
+      connectMode = AUTO;
+    } else {
       connectMode = MANUAL;
-      port = e.target.value
+      port = opt;
     }
     this.setState({
       connectMode: connectMode,
-      port: port
-    })
+      port: port,
+    });
   }
 
-  onUpdateUsbDevices(event, usbDevices){
+  onUpdateUsbDevices(event, usbDevices) {
     this.setState({
-      usbDevices: usbDevices
-    })
+      usbDevices: usbDevices,
+    });
   }
 
   onChangeLabel(e, idx) {
@@ -175,33 +196,81 @@ class App extends React.Component {
     console.log(res);
   }
 
-  async getUsbDevices(){
+  async getUsbDevices() {
     const usbDevices = await ipcRenderer.invoke("utils:get-usb-devices");
     this.setState({
-      usbDevices: usbDevices
-    })
+      usbDevices: usbDevices,
+    });
   }
 
   async componentDidMount() {
-    ipcRenderer.off("utils:update-usb-devices", this.onUpdateUsbDevices)
+    ipcRenderer.off("utils:update-usb-devices", this.onUpdateUsbDevices);
     ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
     ipcRenderer.on("relayjs-updatestate", this.onRlyUpdate);
-    ipcRenderer.on("utils:update-usb-devices", this.onUpdateUsbDevices)
+    ipcRenderer.on("utils:update-usb-devices", this.onUpdateUsbDevices);
     await this.getUsbDevices();
     await this.getAppConfig();
     await this.connect();
   }
 
   async componentWillUnmount() {
-    ipcRenderer.off("utils:update-usb-devices", this.onUpdateUsbDevices)
+    ipcRenderer.off("utils:update-usb-devices", this.onUpdateUsbDevices);
     ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
     await this.saveAppConfig();
     await this.disconnect();
   }
 
   render() {
+
+    let usbDevices = this.state.usbDevices.map((device) => {
+      return {
+        value: device.port,
+        label: device.port,
+      };
+    });
+
+    //menu of options button
+    const optionsMenu = [
+      {
+        value: "open",
+        label: "Open..",
+      },
+      {
+        value: "save",
+        label: "Save",
+      },
+      {
+        value: "save-as",
+        label: "Save as..",
+      },
+      {
+        value: "port",
+        label: "Port",
+        children: [
+          {
+            value: "auto",
+            label: "Auto",
+          },
+          ...usbDevices,
+        ],
+      },
+    ];
+
+    //header elements
+    const entries = [
+      {
+        label: "Options",
+        menu: optionsMenu,
+      },
+    ];
+
+    //header
+    let header = (
+      <AppHeader entries={entries} onChange={this.onChangeOptionsMenu} />
+    );
+
     //Header
-    let header = null;
+    let toolbar = null;
     let headerButton = null;
     if (this.state.connected) {
       headerButton = (
@@ -227,30 +296,71 @@ class App extends React.Component {
       );
     }
 
-    header = (
-      <Row gutter={8}>
-        <Col>
-          <Select
-            defaultValue="auto"
-            style={{ width: 120 }}
-            bordered={true}
-            onChange={this.onChangeUsbDevice}            
-          >
-            <Option value="auto">Auto</Option>
-            {this.state.usbDevices.map((device, i)=>{
-              return <Option key={`usb_${i}`} value={device.port}>{device.port}</Option>
-            })}
-            
-          </Select>
-        </Col>
+    toolbar = (
+      <Row gutter={8} wrap={false}>
         <Col className="gutter-row">{headerButton}</Col>
       </Row>
+    );
+
+    //Relay component
+    let relays = this.state.relays.map((el, idx) => {
+      const index = (idx + 1).toString().padStart(2, "0");
+      return (
+        <Relay
+          key={`relay-${idx}`}
+          switchProps={{
+            checked: el.value,
+            disabled: !this.state.connected || this.state.isbusy,
+            onChange: () => {
+              this.onClickSwitch(el, idx);
+            },
+          }}
+          index={index}
+          inputLabelProps={{
+            value: this.state.labels[idx],
+            placeholder: "label",
+            onChange: (e) => {
+              this.onChangeLabel(e, idx);
+            },
+          }}
+        />
+      );
+    });
+
+    //footer elements
+    const successIcon = <CheckCircleFilled style={{ color: "#52c41a" }} />;
+    const port = this.state.port;
+    const errorIcon = <ExclamationCircleFilled style={{ color: "#a61d24" }} />;
+    const errorLabel = "Disconnected";
+
+    let footer = (
+      <AppFooter
+        elems={[
+          {
+            content: successIcon,
+            hidden: !this.state.connected,
+          },
+          {
+            content: port,
+            hidden: !this.state.connected,
+          },
+          {
+            content: errorIcon,
+            hidden: this.state.connected,
+          },
+          {
+            content: errorLabel,
+            hidden: this.state.connected,
+          },
+        ]}
+      />
     );
 
     //Alert component
     const antIcon = <LoadingOutlined style={{ fontSize: 24 }} spin />;
     let alert = (
       <Alert
+        className="alert"
         type="error"
         banner
         message="Error"
@@ -266,69 +376,6 @@ class App extends React.Component {
     //Spin component
     let spinner = <Spin indicator={antIcon} tip="Connecting..." />;
 
-    //Relay component
-    let relays = this.state.relays.map((el, idx) => {
-      return (
-        <div key={`div_${idx}`} style={{ textAlign: "center" }}>
-          <Row gutter={8}>
-            <Col className="gutter-row">
-              <Switch
-                checked={el.value}
-                disabled={!this.state.connected || this.state.isbusy}
-                style={{ margin: "4px" }}
-                key={`sw__${idx}`}
-                onChange={async () => {
-                  await this.onClickSwitch(el, idx);
-                }}
-              ></Switch>
-            </Col>
-            <Col className="gutter-row">
-              <Typography key={`ty__${idx}`} style={{ color: "#fefefe" }}>
-                {(idx + 1).toString().padStart(2, "0")}
-              </Typography>
-            </Col>
-            <Col className="gutter-row">
-              <Input
-                value={this.state.labels[idx]}
-                placeholder="label"
-                key={`ty__${idx}`}
-                style={{ color: "#fefefe" }}
-                onChange={(e) => {
-                  this.onChangeLabel(e, idx);
-                }}
-              />
-            </Col>
-          </Row>
-        </div>
-      );
-    });
-
-    //state footer component
-    let footer = null;
-    if (this.state.connected) {
-      footer = (
-        <Row gutter={8}>
-          <Col className="gutter-row">
-            <CheckCircleFilled style={{ color: "#52c41a" }} />
-          </Col>
-          <Col className="gutter-row">
-            <Typography>{this.state.port}</Typography>
-          </Col>
-        </Row>
-      );
-    } else {
-      footer = (
-        <Row gutter={8}>
-          <Col className="gutter-row">
-            <ExclamationCircleFilled style={{ color: "#a61d24" }} />
-          </Col>
-          <Col className="gutter-row">
-            <Typography>Disconnected</Typography>
-          </Col>
-        </Row>
-      );
-    }
-
     let internalContent = null;
     if (this.state.loading && !this.state.connected) {
       internalContent = spinner;
@@ -340,9 +387,12 @@ class App extends React.Component {
 
     return (
       <Layout className="layout">
-        <Header className="header">{header}</Header>
+        <Header className={`header menu`}>{header}</Header>
         <Content className="content">
-          <div className="internalContent">{internalContent}</div>
+          <Header className={`header headerContent`}>{toolbar}</Header>
+          <div className="contentWrapper">
+            <div className="internalContent">{internalContent}</div>
+          </div>
         </Content>
         <Footer className="footer">{footer}</Footer>
       </Layout>
