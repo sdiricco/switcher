@@ -41,13 +41,13 @@ class App extends React.Component {
     this.props = props;
     this.state = {
       connected: false,
-      port: "",
+      portConnected: undefined,
+      portSelected: undefined,
       loading: false,
       eMessage: "",
       relays: [],
       isbusy: false,
       labels: [],
-      connectMode: AUTO,
     };
 
     this.timeoutId = undefined;
@@ -65,19 +65,15 @@ class App extends React.Component {
   }
 
   onChangeUsbPort(event, option) {
-    console.log(this.state.connectMode)
-    let connectMode = this.state.connectMode;
+    console.log(option)
 
-    let port = this.state.port;
+    let portSelected = undefined;
     if (option === AUTO) {
-      connectMode = AUTO;
     } else {
-      connectMode = MANUAL;
-      port = option;
+      portSelected = option;
     }
     this.setState({
-      connectMode: connectMode,
-      port: port,
+      portSelected: portSelected,
     });
   }
 
@@ -104,39 +100,30 @@ class App extends React.Component {
       labels: this.state.labels,
     };
     const res = await ipcRenderer.invoke("utils:save-app-conf", appConfig);
-    console.log(res);
   }
 
   async getAppConfig() {
     const res = await ipcRenderer.invoke("utils:get-app-conf");
-    console.log("res.data.labels", res.data.labels);
     this.setState({
       labels: res.data.labels,
     });
   }
 
   onRlyUpdate(event, e, rlyState) {
-    console.log(e);
-    console.log(rlyState);
-
     this.setState({
       eMessage: `${e.message}. ${e.details}`,
       connected: rlyState.connected,
-      port: rlyState.port,
+      portConnected: rlyState.port,
       relays: rlyState.relays,
     });
   }
 
   async onClickConnect() {
-    console.log("clicked connect");
     const res = await this.connect();
-    console.log(res);
   }
 
   async onClickDisconnect() {
-    console.log("clicked disconnect");
     const res = await this.disconnect();
-    console.log(res);
   }
 
   async onClickSwitch(el, idx) {
@@ -148,22 +135,17 @@ class App extends React.Component {
     });
     const isOpen = Boolean(el.state);
     const res = await ipcRenderer.invoke("relayjs-write", idx, Number(!isOpen));
-    console.log(res);
     this.setState({
       isbusy: false,
     });
   }
 
   async connect() {
-    let port = undefined;
     this.setState({
       loading: true,
     });
-    if (this.state.connectMode === MANUAL) {
-      port = this.state.port;
-    }
-    const res = await ipcRenderer.invoke("relayjs:connect", port);
-
+    console.log("connect to portConnected:", this.state.portSelected)
+    const res = await ipcRenderer.invoke("relayjs:connect", this.state.portSelected);
     this.setState({
       loading: false,
     });
@@ -171,7 +153,6 @@ class App extends React.Component {
 
   async disconnect() {
     const res = await ipcRenderer.invoke("relayjs-disconnect");
-    console.log(res);
   }
 
   async componentDidMount() {
@@ -253,7 +234,7 @@ class App extends React.Component {
 
     //footer elements
     const successIcon = <CheckCircleFilled style={{ color: "#52c41a" }} />;
-    const port = this.state.port;
+    const portConnected = this.state.portConnected;
     const errorIcon = <ExclamationCircleFilled style={{ color: "#a61d24" }} />;
     const errorLabel = "Disconnected";
 
@@ -265,7 +246,7 @@ class App extends React.Component {
             hidden: !this.state.connected,
           },
           {
-            content: port,
+            content: portConnected,
             hidden: !this.state.connected,
           },
           {

@@ -17,12 +17,12 @@ const {
 } = require("./modules/utils/utils");
 const usbDetect = require("usb-detection");
 
+const isReloaded = false;
 let mainWindow = null;
 let menu = null;
 const gotTheLock = app.requestSingleInstanceLock();
 const APP_PATH = app.getPath("appData");
 const APP_CONFIG_PATH = path.join(APP_PATH, "relayjs-data", "config.json");
-console.log(APP_CONFIG_PATH);
 const RELAY_MODULE = 1;
 const isMac = process.platform === "darwin";
 const template = [
@@ -129,9 +129,6 @@ const template = [
     submenu: [
       {
         label: "Learn More",
-        click: () => {
-          console.log("hello");
-        },
       },
     ],
   },
@@ -250,8 +247,8 @@ function createWindow() {
       REACT_DEVELOPER_TOOLS,
     } = require("electron-devtools-installer");
     installExtension(REACT_DEVELOPER_TOOLS)
-      .then((name) => console.log(`Added Extension:  ${name}`))
-      .catch((err) => console.log("An error occurred: ", err));
+      .then((name) => console.log(`Added Extension: react developer`))
+      .catch((err) => console.log("An error occurred during add react extension "));
   }
 }
 
@@ -288,8 +285,8 @@ ipcMain.handle("relayjs:connect", async (event, data) => {
     error: "",
   };
   try {
+    console.log(data)
     ret.success = await relayjs.connect(data);
-    console.log(relayjs.relays);
     sendRlyState();
   } catch (e) {
     sendRlyState({
@@ -382,7 +379,6 @@ ipcMain.handle("utils:get-app-conf", async (event, data) => {
     res.error = e.message;
     res.success = false;
   }
-  console.log(res);
   return res;
 });
 
@@ -393,7 +389,6 @@ ipcMain.handle("utils:save-app-conf", async (event, jsonObj) => {
     data: {},
   };
   try {
-    console.log(APP_CONFIG_PATH);
     await saveJSON(APP_CONFIG_PATH, jsonObj);
     ret.success = true;
   } catch (e) {
