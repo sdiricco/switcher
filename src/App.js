@@ -32,10 +32,8 @@ const { ipcRenderer } = window.require("electron");
 const OPEN = 0;
 const CLOSE = 1;
 
-const OPTIONS_PORT = "port";
-
-const AUTO = "auto";
-const MANUAL = "manual";
+const AUTO = "Auto";
+const MANUAL = "Manual";
 
 class App extends React.Component {
   constructor(props) {
@@ -49,14 +47,12 @@ class App extends React.Component {
       relays: [],
       isbusy: false,
       labels: [],
-      usbDevices: [],
       connectMode: AUTO,
     };
 
     this.timeoutId = undefined;
 
-    this.onChangeOptionsMenu = this.onChangeOptionsMenu.bind(this);
-    this.onUpdateUsbDevices = this.onUpdateUsbDevices.bind(this);
+    this.onChangeUsbPort = this.onChangeUsbPort.bind(this);
     this.onChangeLabel = this.onChangeLabel.bind(this);
     this.saveAppConfig = this.saveAppConfig.bind(this);
     this.getAppConfig = this.getAppConfig.bind(this);
@@ -68,37 +64,20 @@ class App extends React.Component {
     this.onRlyUpdate = this.onRlyUpdate.bind(this);
   }
 
-  async onChangeOptionsMenu(tree) {
-    console.log(tree);
-    const entry = tree[0];
-    switch (entry) {
-      case OPTIONS_PORT:
-        console.log(tree[1]);
-        this.onChangeUsbPort(tree[1]);
-        break;
-      default:
-        break;
-    }
-  }
-
-  onChangeUsbPort(opt) {
+  onChangeUsbPort(event, option) {
+    console.log(this.state.connectMode)
     let connectMode = this.state.connectMode;
+
     let port = this.state.port;
-    if (opt === AUTO) {
+    if (option === AUTO) {
       connectMode = AUTO;
     } else {
       connectMode = MANUAL;
-      port = opt;
+      port = option;
     }
     this.setState({
       connectMode: connectMode,
       port: port,
-    });
-  }
-
-  onUpdateUsbDevices(event, usbDevices) {
-    this.setState({
-      usbDevices: usbDevices,
     });
   }
 
@@ -195,25 +174,18 @@ class App extends React.Component {
     console.log(res);
   }
 
-  async getUsbDevices() {
-    const usbDevices = await ipcRenderer.invoke("utils:get-usb-devices");
-    this.setState({
-      usbDevices: usbDevices,
-    });
-  }
-
   async componentDidMount() {
-    ipcRenderer.off("utils:update-usb-devices", this.onUpdateUsbDevices);
+    ipcRenderer.off("port:change", this.onChangeUsbPort);
     ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
     ipcRenderer.on("relayjs-updatestate", this.onRlyUpdate);
-    ipcRenderer.on("utils:update-usb-devices", this.onUpdateUsbDevices);
-    await this.getUsbDevices();
+    ipcRenderer.on("port:change", this.onChangeUsbPort);
+    await ipcRenderer.invoke("dom:loaded");
     await this.getAppConfig();
     await this.connect();
   }
 
   async componentWillUnmount() {
-    ipcRenderer.off("utils:update-usb-devices", this.onUpdateUsbDevices);
+    ipcRenderer.on("port:change", this.onChangeUsbPort);
     ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
     await this.saveAppConfig();
     await this.disconnect();

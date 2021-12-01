@@ -4,121 +4,169 @@ const {
   ipcMain,
   dialog,
   ipcRenderer,
-  Menu
+  Menu,
 } = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
 const { RelayJs } = require("@sdiricco/relayjs");
-const { existsFile, loadJSON, saveJSON, getUsbDevices } = require("./modules/utils/utils");
+const {
+  existsFile,
+  loadJSON,
+  saveJSON,
+  getUsbDevices,
+} = require("./modules/utils/utils");
 const usbDetect = require("usb-detection");
 
 let mainWindow = null;
+let menu = null;
 const gotTheLock = app.requestSingleInstanceLock();
 const APP_PATH = app.getPath("appData");
 const APP_CONFIG_PATH = path.join(APP_PATH, "relayjs-data", "config.json");
 console.log(APP_CONFIG_PATH);
 const RELAY_MODULE = 1;
-
-const isMac = process.platform === 'darwin'
-
+const isMac = process.platform === "darwin";
 const template = [
   // { role: 'appMenu' }
-  ...(isMac ? [{
-    label: app.name,
-    submenu: [
-      { role: 'about' },
-      { type: 'separator' },
-      { role: 'services' },
-      { type: 'separator' },
-      { role: 'hide' },
-      { role: 'hideOthers' },
-      { role: 'unhide' },
-      { type: 'separator' },
-      { role: 'quit' }
-    ]
-  }] : []),
+  ...(isMac
+    ? [
+        {
+          label: app.name,
+          submenu: [
+            { role: "about" },
+            { type: "separator" },
+            { role: "services" },
+            { type: "separator" },
+            { role: "hide" },
+            { role: "hideOthers" },
+            { role: "unhide" },
+            { type: "separator" },
+            { role: "quit" },
+          ],
+        },
+      ]
+    : []),
   // { role: 'fileMenu' }
   {
-    label: 'File',
+    label: "File",
     submenu: [
-      { label: 'Open' },
-      { type: 'separator' },
-      { label: 'Save' },
-      { label: 'Save as..' },
-      { type: 'separator' },
-      isMac ? { role: 'close' } : { role: 'quit' }
-    ]
+      { label: "Open" },
+      { type: "separator" },
+      { label: "Save" },
+      { label: "Save as.." },
+      { type: "separator" },
+      {
+        label: "Port",
+        submenu: [
+          {
+            label: "Auto",
+            click: () => {
+              mainWindow.webContents.send("port:change", "Auto");
+            },
+          },
+        ],
+      },
+
+      isMac ? { role: "close" } : { role: "quit" },
+    ],
   },
   // { role: 'editMenu' }
   {
-    label: 'Edit',
+    label: "Edit",
     submenu: [
-      { role: 'undo' },
-      { role: 'redo' },
-      { type: 'separator' },
-      { role: 'cut' },
-      { role: 'copy' },
-      { role: 'paste' },
-      ...(isMac ? [
-        { role: 'pasteAndMatchStyle' },
-        { role: 'delete' },
-        { role: 'selectAll' },
-        { type: 'separator' },
-        {
-          label: 'Speech',
-          submenu: [
-            { role: 'startSpeaking' },
-            { role: 'stopSpeaking' }
+      { role: "undo" },
+      { role: "redo" },
+      { type: "separator" },
+      { role: "cut" },
+      { role: "copy" },
+      { role: "paste" },
+      ...(isMac
+        ? [
+            { role: "pasteAndMatchStyle" },
+            { role: "delete" },
+            { role: "selectAll" },
+            { type: "separator" },
+            {
+              label: "Speech",
+              submenu: [{ role: "startSpeaking" }, { role: "stopSpeaking" }],
+            },
           ]
-        }
-      ] : [
-        { role: 'delete' },
-        { type: 'separator' },
-        { role: 'selectAll' }
-      ])
-    ]
+        : [{ role: "delete" }, { type: "separator" }, { role: "selectAll" }]),
+    ],
   },
   // { role: 'viewMenu' }
   {
-    label: 'View',
+    label: "View",
     submenu: [
-      { role: 'reload' },
-      { role: 'forceReload' },
-      { role: 'toggleDevTools' },
-      { type: 'separator' },
-      { role: 'resetZoom' },
-      { role: 'zoomIn' },
-      { role: 'zoomOut' },
-      { type: 'separator' },
-      { role: 'togglefullscreen' }
-    ]
+      { role: "reload" },
+      { role: "forceReload" },
+      { role: "toggleDevTools" },
+      { type: "separator" },
+      { role: "resetZoom" },
+      { role: "zoomIn" },
+      { role: "zoomOut" },
+      { type: "separator" },
+      { role: "togglefullscreen" },
+    ],
   },
   // { role: 'windowMenu' }
   {
-    label: 'Window',
+    label: "Window",
     submenu: [
-      { role: 'minimize' },
-      { role: 'zoom' },
-      ...(isMac ? [
-        { type: 'separator' },
-        { role: 'front' },
-        { type: 'separator' },
-        { role: 'window' }
-      ] : [
-        { role: 'close' }
-      ])
-    ]
+      { role: "minimize" },
+      { role: "zoom" },
+      ...(isMac
+        ? [
+            { type: "separator" },
+            { role: "front" },
+            { type: "separator" },
+            { role: "window" },
+          ]
+        : [{ role: "close" }]),
+    ],
   },
   {
-    role: 'help',
+    role: "help",
     submenu: [
       {
-        label: 'Learn More',
-        click: ()=>{console.log('hello')}
-      }
-    ]
+        label: "Learn More",
+        click: () => {
+          console.log("hello");
+        },
+      },
+    ],
+  },
+];
+
+function updateMenuTemplate(devices) {
+  const usbitems = devices.map((device) => {
+    return {
+      label: device.port,
+      click: () => {
+        mainWindow.webContents.send("port:change", device.port);
+      },
+    };
+  });
+
+  const items = [
+    {
+      label: "Auto",
+      click: () => {
+        mainWindow.webContents.send("port:change", "Auto");
+      },
+    },
+    ...usbitems,
+  ];
+
+  const fileIdx = template.findIndex((el) => el.label === "File");
+  if (fileIdx < 0 || !template[fileIdx].submenu) {
+    return;
   }
-]
+  const portIdx = template[fileIdx].submenu.findIndex(
+    (el) => el.label === "Port"
+  );
+  template[fileIdx].submenu[portIdx].submenu = items;
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
 
 const showMessageBox = (options) => {
   let __options = {
@@ -166,6 +214,7 @@ if (!gotTheLock) {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
+    autoHideMenuBar: true,
     minWidth: 400,
     minHeight: 200,
     show: true,
@@ -187,8 +236,8 @@ function createWindow() {
     if (isDev) {
       mainWindow.toggleDevTools();
     }
-    const menu = Menu.buildFromTemplate(template)
-    Menu.setApplicationMenu(menu)
+    // menu = Menu.buildFromTemplate(template);
+    // Menu.setApplicationMenu(menu);
   });
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -205,11 +254,6 @@ function createWindow() {
       .catch((err) => console.log("An error occurred: ", err));
   }
 }
-
-
-
-
-
 
 ////////////////////////////////////////// handle Relaysjs \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -311,13 +355,13 @@ ipcMain.handle("relayjs-getrelays", (event, data) => {
 usbDetect.startMonitoring();
 usbDetect.on("change", async () => {
   const devices = await getUsbDevices();
-  mainWindow.webContents.send("utils:update-usb-devices", devices);
+  updateMenuTemplate(devices);
 });
 
-ipcMain.handle("utils:get-usb-devices", async(event, data) => {
+ipcMain.handle("utils:get-usb-devices", async (event, data) => {
   const devices = await getUsbDevices();
   return devices;
-})
+});
 
 ipcMain.handle("utils:get-app-conf", async (event, data) => {
   const res = {
@@ -357,4 +401,11 @@ ipcMain.handle("utils:save-app-conf", async (event, jsonObj) => {
     ret.error = e.message;
   }
   return ret;
+});
+
+ipcMain.handle("dom:loaded", async (event, jsonObj) => {
+  const devices = await getUsbDevices();
+  updateMenuTemplate(devices);
+  mainWindow.autoHideMenuBar = false;
+  mainWindow.menuBarVisible = true;
 });
