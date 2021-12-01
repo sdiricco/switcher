@@ -1,4 +1,4 @@
-const fs = require("fs").promises;
+const fsPromises = require("fs").promises;
 const path = require("path");
 const SerialPort = require("serialport");
 
@@ -13,12 +13,12 @@ const saveJSON = async function (file, jsonObj) {
     const exsistPath = await existsFile(file);
     if (!exsistPath) {
       const __path = path.dirname(file);
-      await fs.mkdir(__path, {
+      await fsPromises.mkdir(__path, {
         recursive: true
       })
     }
     const json = JSON.stringify(jsonObj, null, 2);
-    await fs.writeFile(file, json);
+    await fsPromises.writeFile(file, json);
   } catch (e) {
     throw new Error(e);
   }
@@ -31,7 +31,7 @@ const saveJSON = async function (file, jsonObj) {
 const loadJSON = async function (file) {
   let jsonObj = {};
   try {
-    const json = await fs.readFile(file);
+    const json = await fsPromises.readFile(file);
     jsonObj = JSON.parse(json);
   } catch (e) {
     throw e;
@@ -46,7 +46,7 @@ const loadJSON = async function (file) {
  */
 const existsFile = async (file) => {
   try {
-    await fs.access(file);
+    await fsPromises.access(file);
   } catch (e) {
     if (e.code === "ENOENT") {
       return false;

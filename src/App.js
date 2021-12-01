@@ -52,6 +52,10 @@ class App extends React.Component {
 
     this.timeoutId = undefined;
 
+    this.onOpenFile = this.onOpenFile.bind(this);
+    this.onSaveFile = this.onSaveFile.bind(this);
+    this.onSaveAsFile = this.onSaveAsFile.bind(this);
+
     this.onChangeUsbPort = this.onChangeUsbPort.bind(this);
     this.onChangeLabel = this.onChangeLabel.bind(this);
     this.saveAppConfig = this.saveAppConfig.bind(this);
@@ -62,6 +66,20 @@ class App extends React.Component {
     this.onClickConnect = this.onClickConnect.bind(this);
     this.onClickDisconnect = this.onClickDisconnect.bind(this);
     this.onRlyUpdate = this.onRlyUpdate.bind(this);
+  }
+
+  async onOpenFile(event, data){
+    await ipcRenderer.invoke("utils:open-custom-app-config")
+    console.log('open')
+  }
+
+  async onSaveFile(event, data){
+    console.log('save')
+  }
+
+  async onSaveAsFile(event, data){
+    await ipcRenderer.invoke("utils:saveas-custom-app-config")
+    console.log('save as')
   }
 
   onChangeUsbPort(event, option) {
@@ -156,10 +174,18 @@ class App extends React.Component {
   }
 
   async componentDidMount() {
+    ipcRenderer.off("menu:file:open", this.onOpenFile);
+    ipcRenderer.off("menu:file:save", this.onSaveFile);
+    ipcRenderer.off("menu:file:saveas", this.onSaveAsFile);
     ipcRenderer.off("port:change", this.onChangeUsbPort);
     ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
-    ipcRenderer.on("relayjs-updatestate", this.onRlyUpdate);
+
+    ipcRenderer.on("menu:file:open", this.onOpenFile);
+    ipcRenderer.on("menu:file:save", this.onSaveFile);
+    ipcRenderer.on("menu:file:saveas", this.onSaveAsFile);
     ipcRenderer.on("port:change", this.onChangeUsbPort);
+    ipcRenderer.on("relayjs-updatestate", this.onRlyUpdate);
+
     await ipcRenderer.invoke("dom:loaded");
     await this.getAppConfig();
     await this.connect();

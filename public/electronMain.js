@@ -16,6 +16,7 @@ const {
   getUsbDevices,
 } = require("./modules/utils/utils");
 const usbDetect = require("usb-detection");
+const fs = require("fs");
 
 const isReloaded = false;
 let mainWindow = null;
@@ -49,23 +50,22 @@ const template = [
   {
     label: "File",
     submenu: [
-      { label: "Open" },
-      { type: "separator" },
-      { label: "Save" },
-      { label: "Save as.." },
+      {
+        label: "Open",
+        click: onMenuFileOpen,
+      },
       { type: "separator" },
       {
-        label: "Port",
-        submenu: [
-          {
-            label: "Auto",
-            click: () => {
-              mainWindow.webContents.send("port:change", "Auto");
-            },
-          },
-        ],
+        label: "Save",
+        accelerator: "Ctrl + S",
+        click: onMenuFileSave,
       },
-
+      {
+        label: "Save as..",
+        accelerator: "Ctrl + Shift + S",
+        click: onMenuFileSaveAs,
+      },
+      { type: "separator" },
       isMac ? { role: "close" } : { role: "quit" },
     ],
   },
@@ -125,6 +125,23 @@ const template = [
     ],
   },
   {
+    label: "Settings",
+    submenu: [
+      { type: "checkbox", label: "Autosave", checked: true },
+      {
+        label: "Port",
+        submenu: [
+          {
+            label: "Auto",
+            click: () => {
+              mainWindow.webContents.send("port:change", "Auto");
+            },
+          },
+        ],
+      },
+    ],
+  },
+  {
     role: "help",
     submenu: [
       {
@@ -133,6 +150,34 @@ const template = [
     ],
   },
 ];
+
+function onMenuFileOpen() {
+  console.log("before open");
+  if (!mainWindow) {
+    return;
+  }
+  console.log("open");
+  mainWindow.webContents.send("menu:file:open", true);
+}
+
+function onMenuFileSave() {
+  console.log("before save");
+  if (!mainWindow) {
+    return;
+  }
+  console.log("save");
+
+  mainWindow.webContents.send("menu:file:save", true);
+}
+
+function onMenuFileSaveAs() {
+  console.log("before save as");
+  if (!mainWindow) {
+    return;
+  }
+  console.log("save as");
+  mainWindow.webContents.send("menu:file:saveas", true);
+}
 
 function updateMenuTemplate(devices) {
   const usbitems = devices.map((device) => {
@@ -154,7 +199,7 @@ function updateMenuTemplate(devices) {
     ...usbitems,
   ];
 
-  const fileIdx = template.findIndex((el) => el.label === "File");
+  const fileIdx = template.findIndex((el) => el.label === "Settings");
   if (fileIdx < 0 || !template[fileIdx].submenu) {
     return;
   }
@@ -162,7 +207,8 @@ function updateMenuTemplate(devices) {
     (el) => el.label === "Port"
   );
   template[fileIdx].submenu[portIdx].submenu = items;
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  const menu = Menu.buildFromTemplate(template);
+  mainWindow.setMenu(menu);
 }
 
 const showMessageBox = (options) => {
@@ -228,13 +274,13 @@ function createWindow() {
 
   mainWindow.loadURL(startURL);
 
+  mainWindow.removeMenu();
+
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
     if (isDev) {
       mainWindow.toggleDevTools();
     }
-    // menu = Menu.buildFromTemplate(template);
-    // Menu.setApplicationMenu(menu);
   });
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -248,7 +294,9 @@ function createWindow() {
     } = require("electron-devtools-installer");
     installExtension(REACT_DEVELOPER_TOOLS)
       .then((name) => console.log(`Added Extension: react developer`))
-      .catch((err) => console.log("An error occurred during add react extension "));
+      .catch((err) =>
+        console.log("An error occurred during add react extension ")
+      );
   }
 }
 
@@ -285,7 +333,7 @@ ipcMain.handle("relayjs:connect", async (event, data) => {
     error: "",
   };
   try {
-    console.log(data)
+    console.log(data);
     ret.success = await relayjs.connect(data);
     sendRlyState();
   } catch (e) {
@@ -404,3 +452,45 @@ ipcMain.handle("dom:loaded", async (event, jsonObj) => {
   mainWindow.autoHideMenuBar = false;
   mainWindow.menuBarVisible = true;
 });
+
+ipcMain.handle("utils:open-custom-app-config", async (event, filter) => {
+  try {
+    const result = dialog.showOpenDialogSync(mainWindow, {
+      properties: ["openFile"],
+      // filters: filter,
+    });
+
+    if (result !== undefined) {
+      return result[0];
+    }
+  } catch (e) {}
+
+  return "";
+});
+
+ipcMain.handle("utils:saveas-custom-app-config", async (event) => {
+  var options = {
+    title: "Save app config",
+    defaultPath: "config",
+    buttonLabel: "Save",
+
+    filters: [
+      { name: "json", extensions: ["json"] },
+    ],
+  };
+  try {
+    dialog.showSaveDialog(null, options).then(({ filePath }) => {
+      fs.writeFileSync(filePath, "hello world", "utf-8");
+    });
+
+    if (result !== undefined) {
+      return result[0];
+    }
+  } catch (e) {}
+
+  return "";
+});
+
+
+
+
