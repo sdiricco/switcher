@@ -17,6 +17,29 @@ const {
 } = require("./modules/utils/utils");
 const usbDetect = require("usb-detection");
 const fs = require("fs");
+const contextMenu = require("electron-context-menu");
+
+contextMenu({
+  prepend: (defaultActions, parameters, browserWindow) => [
+    {
+      label: "Rainbow",
+      // Only show it when right-clicking images
+      visible: parameters.mediaType === "image",
+    },
+    {
+      label: "Search Google for “{selection}”",
+      // Only show it when right-clicking text
+      visible: parameters.selectionText.trim().length > 0,
+      click: () => {
+        shell.openExternal(
+          `https://google.com/search?q=${encodeURIComponent(
+            parameters.selectionText
+          )}`
+        );
+      },
+    },
+  ],
+});
 
 const isReloaded = false;
 let mainWindow = null;
@@ -474,9 +497,7 @@ ipcMain.handle("utils:saveas-custom-app-config", async (event) => {
     defaultPath: "config",
     buttonLabel: "Save",
 
-    filters: [
-      { name: "json", extensions: ["json"] },
-    ],
+    filters: [{ name: "json", extensions: ["json"] }],
   };
   try {
     dialog.showSaveDialog(null, options).then(({ filePath }) => {
@@ -490,7 +511,3 @@ ipcMain.handle("utils:saveas-custom-app-config", async (event) => {
 
   return "";
 });
-
-
-
-
