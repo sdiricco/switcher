@@ -1,5 +1,9 @@
 import React from "react";
 import { Row, Col } from "antd";
+import {
+  ExclamationCircleFilled,
+  CheckCircleFilled,
+} from "@ant-design/icons";
 
 class AppFooter extends React.Component {
   constructor(props) {
@@ -8,17 +12,24 @@ class AppFooter extends React.Component {
   }
 
   render() {
-    const elems = this.props.elems || [];
     return (
       <Row gutter={8}>
-        {elems.map((entry) => {
-          if (entry.content && !entry.hidden) {
-            return <Col className="gutter-row">{entry.content}</Col>;
-          }
-          else{
-            return null
-          }
-        })}
+        {this.props.connected && (
+          <React.Fragment>
+            <Col className="gutter-row">
+              <CheckCircleFilled style={{ color: "#52c41a" }} />
+            </Col>
+            <Col className="gutter-row">{this.props.portConnected}</Col>
+          </React.Fragment>
+        )}
+        {!this.props.connected && (
+          <React.Fragment>
+            <Col className="gutter-row">
+              <ExclamationCircleFilled style={{ color: "#a61d24" }} />
+            </Col>
+            <Col className="gutter-row">Disconnected</Col>
+          </React.Fragment>
+        )}
       </Row>
     );
   }

@@ -8,17 +8,33 @@ class Relay extends React.Component {
   }
 
   render() {
-    let index = this.props.index !== undefined ? this.props.index : "";
     return (
       <Row gutter={8}>
         <Col className="gutter-row">
-          <Switch {...this.props.switchProps} />
-        </Col>
-        <Col className="gutter-row">
-          <Typography {...this.props.indexProps}>{index}</Typography>
-        </Col>
-        <Col className="gutter-row">
-          <Input {...this.props.inputLabelProps} />
+          {this.props.relays.map((relay, idx) => {
+            const index = (idx + 1).toString().padStart(2, "0");
+            return (
+              <Row gutter={8}>
+                <Col className="gutter-row">
+                  <Switch
+                    checked={relay.value}
+                    disabled={!this.props.connected}
+                    onChange={(e) => {
+                      this.props.onClickSwitch(relay, idx);
+                    }}
+                  />
+                </Col>
+                <Col className="gutter-row">
+                  <Typography>{index}</Typography>
+                </Col>
+                <Col className="gutter-row">
+                  <Input value={this.props.labels[idx]} placeholder="label" onChange={(e)=>{
+                    this.props.onChangeLabel(e, idx);
+                  }}/>
+                </Col>
+              </Row>
+            );
+          })}
         </Col>
       </Row>
     );

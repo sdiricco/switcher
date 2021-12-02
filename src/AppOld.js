@@ -1,5 +1,33 @@
 import React from "react";
-import AppRender from "./AppRender"
+import Marquee from "react-fast-marquee";
+import {
+  Button,
+  Switch,
+  Typography,
+  Input,
+  Layout,
+  Row,
+  Col,
+  Spin,
+  Alert,
+  Select,
+} from "antd";
+import {
+  ExclamationCircleFilled,
+  CheckCircleFilled,
+  LoadingOutlined,
+  ApiOutlined,
+  DisconnectOutlined,
+} from "@ant-design/icons";
+
+import "./App.less";
+
+import Relay from "./components/Relay";
+import AppFooter from "./components/AppFooter";
+import { placeholder } from "@babel/types";
+
+const { Option } = Select;
+const { Header, Footer, Sider, Content } = Layout;
 const { ipcRenderer } = window.require("electron");
 const OPEN = 0;
 const CLOSE = 1;
@@ -171,31 +199,135 @@ class App extends React.Component {
   }
 
   render() {
-    return (
-      <AppRender
-        connected={this.state.connected}
-        portConnected={this.state.portConnected}
-        portSelected={this.state.portSelected}
-        loading={this.state.loading}
-        eMessage={this.state.eMessage}
-        relays={this.state.relays}
-        isbusy={this.state.isbusy}
-        labels={this.state.labels}
 
-        onOpenFile={this.onOpenFile}
-        onSaveFile={this.onSaveFile}
-        onSaveAsFile={this.onSaveAsFile}
-        onChangeUsbPort={this.onChangeUsbPort}
-        onChangeLabel={this.onChangeLabel}
-        saveAppConfig={this.saveAppConfig}
-        getAppConfig={this.getAppConfig}
-        connect={this.connect}
-        onClickSwitch={this.onClickSwitch}
-        onClickConnect={this.onClickConnect}
-        onClickDisconnect={this.onClickDisconnect}
-        onRlyUpdate={this.onRlyUpdate}
+    //Header
+    let toolbar = null;
+    let headerButton = null;
+    if (this.state.connected) {
+      headerButton = (
+        <Button
+          disabled={this.state.loading}
+          type="text"
+          onClick={this.onClickDisconnect}
+        >
+          <DisconnectOutlined />
+          Disconnect
+        </Button>
+      );
+    } else {
+      headerButton = (
+        <Button
+          disabled={this.state.loading}
+          type="text"
+          onClick={this.onClickConnect}
+        >
+          <ApiOutlined />
+          Connect
+        </Button>
+      );
+    }
+
+    toolbar = (
+      <Row gutter={8} wrap={false}>
+        <Col className="gutter-row">{headerButton}</Col>
+      </Row>
+    );
+
+    //Relay component
+    let relays = this.state.relays.map((el, idx) => {
+      const index = (idx + 1).toString().padStart(2, "0");
+      return (
+        <Relay
+          key={`relay-${idx}`}
+          switchProps={{
+            checked: el.value,
+            disabled: !this.state.connected || this.state.isbusy,
+            onChange: () => {
+              this.onClickSwitch(el, idx);
+            },
+          }}
+          index={index}
+          inputLabelProps={{
+            value: this.state.labels[idx],
+            placeholder: "label",
+            onChange: (e) => {
+              this.onChangeLabel(e, idx);
+            },
+          }}
+        />
+      );
+    });
+
+    //footer elements
+    const successIcon = <CheckCircleFilled style={{ color: "#52c41a" }} />;
+    const portConnected = this.state.portConnected;
+    const errorIcon = <ExclamationCircleFilled style={{ color: "#a61d24" }} />;
+    const errorLabel = "Disconnected";
+
+    let footer = (
+      <AppFooter
+        elems={[
+          {
+            content: successIcon,
+            hidden: !this.state.connected,
+          },
+          {
+            content: portConnected,
+            hidden: !this.state.connected,
+          },
+          {
+            content: errorIcon,
+            hidden: this.state.connected,
+          },
+          {
+            content: errorLabel,
+            hidden: this.state.connected,
+          },
+        ]}
       />
+    );
+
+    //Alert component
+    const antIcon = <LoadingOutlined style={{ fontSize: 24 }} spin />;
+    let alert = (
+      <Alert
+        className="alert"
+        type="error"
+        banner
+        message="Error"
+        description={
+          <Marquee pauseOnHover gradient={false}>
+            {this.state.eMessage}
+          </Marquee>
+        }
+        closable
+      />
+    );
+
+    //Spin component
+    let spinner = <Spin indicator={antIcon} tip="Connecting..." />;
+
+    let internalContent = null;
+    if (this.state.loading && !this.state.connected) {
+      internalContent = spinner;
+    } else if (this.state.connected && !this.state.loading) {
+      internalContent = relays;
+    } else if (!this.state.connected && !this.state.loading) {
+      internalContent = alert;
+    }
+
+    return (
+      <Layout className="layout">
+        <Content className="content">
+          <Header className={`header headerContent`}>{toolbar}</Header>
+          <div className="contentWrapper">
+            <div className="internalContent">{internalContent}</div>
+          </div>
+        </Content>
+        <Footer className="footer">{footer}</Footer>
+      </Layout>
     );
   }
 }
+
 export default App;
