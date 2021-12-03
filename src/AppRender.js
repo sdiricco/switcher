@@ -24,12 +24,6 @@ class AppRender extends React.Component {
           <AppToolbar {...this.props} />
         </Header>
         <Content className="content">
-          {this.props.loading && (
-            <Spin
-              indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />}
-              tip="Connecting..."
-            />
-          )}
           {this.props.connected&& (
             <Relay {...this.props} />
           )}

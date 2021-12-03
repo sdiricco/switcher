@@ -1,5 +1,9 @@
 import React from "react";
-import AppRender from "./AppRender"
+import AppRender from "./AppRender";
+import { Spin } from "antd";
+import { LoadingOutlined } from "@ant-design/icons";
+import "./App.less"
+
 const { ipcRenderer } = window.require("electron");
 const OPEN = 0;
 const CLOSE = 1;
@@ -40,22 +44,22 @@ class App extends React.Component {
     this.onRlyUpdate = this.onRlyUpdate.bind(this);
   }
 
-  async onOpenFile(event, data){
-    await ipcRenderer.invoke("utils:open-custom-app-config")
-    console.log('open')
+  async onOpenFile(event, data) {
+    await ipcRenderer.invoke("utils:open-custom-app-config");
+    console.log("open");
   }
 
-  async onSaveFile(event, data){
-    console.log('save')
+  async onSaveFile(event, data) {
+    console.log("save");
   }
 
-  async onSaveAsFile(event, data){
-    await ipcRenderer.invoke("utils:saveas-custom-app-config")
-    console.log('save as')
+  async onSaveAsFile(event, data) {
+    await ipcRenderer.invoke("utils:saveas-custom-app-config");
+    console.log("save as");
   }
 
   onChangeUsbPort(event, option) {
-    console.log(option)
+    console.log(option);
 
     let portSelected = undefined;
     if (option === AUTO) {
@@ -134,8 +138,11 @@ class App extends React.Component {
     this.setState({
       loading: true,
     });
-    console.log("connect to portConnected:", this.state.portSelected)
-    const res = await ipcRenderer.invoke("relayjs:connect", this.state.portSelected);
+    console.log("connect to portConnected:", this.state.portSelected);
+    const res = await ipcRenderer.invoke(
+      "relayjs:connect",
+      this.state.portSelected
+    );
     this.setState({
       loading: false,
     });
@@ -172,29 +179,35 @@ class App extends React.Component {
 
   render() {
     return (
-      <AppRender
-        connected={this.state.connected}
-        portConnected={this.state.portConnected}
-        portSelected={this.state.portSelected}
-        loading={this.state.loading}
-        eMessage={this.state.eMessage}
-        relays={this.state.relays}
-        isbusy={this.state.isbusy}
-        labels={this.state.labels}
-
-        onOpenFile={this.onOpenFile}
-        onSaveFile={this.onSaveFile}
-        onSaveAsFile={this.onSaveAsFile}
-        onChangeUsbPort={this.onChangeUsbPort}
-        onChangeLabel={this.onChangeLabel}
-        saveAppConfig={this.saveAppConfig}
-        getAppConfig={this.getAppConfig}
-        connect={this.connect}
-        onClickSwitch={this.onClickSwitch}
-        onClickConnect={this.onClickConnect}
-        onClickDisconnect={this.onClickDisconnect}
-        onRlyUpdate={this.onRlyUpdate}
-      />
+      <Spin
+        className="spinner"
+        indicator={<LoadingOutlined style={{ fontSize: 24 }} spin />}
+        spinning={this.state.loading}
+        tip="Connecting..."
+      >
+        <AppRender
+          connected={this.state.connected}
+          portConnected={this.state.portConnected}
+          portSelected={this.state.portSelected}
+          loading={this.state.loading}
+          eMessage={this.state.eMessage}
+          relays={this.state.relays}
+          isbusy={this.state.isbusy}
+          labels={this.state.labels}
+          onOpenFile={this.onOpenFile}
+          onSaveFile={this.onSaveFile}
+          onSaveAsFile={this.onSaveAsFile}
+          onChangeUsbPort={this.onChangeUsbPort}
+          onChangeLabel={this.onChangeLabel}
+          saveAppConfig={this.saveAppConfig}
+          getAppConfig={this.getAppConfig}
+          connect={this.connect}
+          onClickSwitch={this.onClickSwitch}
+          onClickConnect={this.onClickConnect}
+          onClickDisconnect={this.onClickDisconnect}
+          onRlyUpdate={this.onRlyUpdate}
+        />
+      </Spin>
     );
   }
 }

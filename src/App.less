@@ -1,9 +1,14 @@
 //@import '~antd/dist/antd.compact.less'; // Introduce the official compact less style entry file
 @import "~antd/dist/antd.dark.less";
 
+.spinner{
+  //need to override 400px, the default value
+  max-height: fit-content !important;
+}
+
 .layout {
-  width: 100vw;
   height: 100vh;
+  width: 100vw;
   margin: 0px;
   padding: 0px;
   overflow: hidden;
@@ -35,6 +40,14 @@
   justify-content: center;
 }
 
+
+.loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
 
 .alert {
   max-width: 400px;
