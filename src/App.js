@@ -186,26 +186,7 @@ class App extends React.Component {
         tip="Connecting..."
       >
         <AppRender
-          connected={this.state.connected}
-          portConnected={this.state.portConnected}
-          portSelected={this.state.portSelected}
-          loading={this.state.loading}
-          eMessage={this.state.eMessage}
-          relays={this.state.relays}
-          isbusy={this.state.isbusy}
-          labels={this.state.labels}
-          onOpenFile={this.onOpenFile}
-          onSaveFile={this.onSaveFile}
-          onSaveAsFile={this.onSaveAsFile}
-          onChangeUsbPort={this.onChangeUsbPort}
-          onChangeLabel={this.onChangeLabel}
-          saveAppConfig={this.saveAppConfig}
-          getAppConfig={this.getAppConfig}
-          connect={this.connect}
-          onClickSwitch={this.onClickSwitch}
-          onClickConnect={this.onClickConnect}
-          onClickDisconnect={this.onClickDisconnect}
-          onRlyUpdate={this.onRlyUpdate}
+          {...this.state}
         />
       </Spin>
     );

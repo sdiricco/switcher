@@ -1,7 +1,6 @@
 import React from "react";
 import Marquee from "react-fast-marquee";
-import { Layout, Spin, Alert } from "antd";
-import { LoadingOutlined } from "@ant-design/icons";
+import { Layout, Alert } from "antd";
 
 import "./App.less";
 
