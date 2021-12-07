@@ -291,6 +291,7 @@ function createWindow() {
     show: true,
     title: "Relay App",
     webPreferences: {
+      backgroundThrottling: false,
       nodeIntegration: true,
       enableRemoteModule: true,
       contextIsolation: false,
@@ -369,41 +370,11 @@ ipcMain.handle("utils:get-usb-devices", async (event, data) => {
 });
 
 ipcMain.handle("utils:get-app-conf", async (event, data) => {
-  const res = {
-    success: false,
-    error: "",
-    data: {},
-  };
-  try {
-    const isAppConfExsist = await existsFile(APP_CONFIG_PATH);
-    if (!isAppConfExsist) {
-      res.success = false;
-      return res;
-    }
-    const jsonObj = await loadJSON(APP_CONFIG_PATH);
-    res.success = true;
-    res.data = jsonObj;
-  } catch (e) {
-    res.error = e.message;
-    res.success = false;
-  }
-  return res;
+
 });
 
 ipcMain.handle("utils:save-app-conf", async (event, jsonObj) => {
-  const ret = {
-    success: false,
-    error: "",
-    data: {},
-  };
-  try {
-    await saveJSON(APP_CONFIG_PATH, jsonObj);
-    ret.success = true;
-  } catch (e) {
-    ret.success = false;
-    ret.error = e.message;
-  }
-  return ret;
+
 });
 
 ipcMain.handle("dom:loaded", async (event, jsonObj) => {

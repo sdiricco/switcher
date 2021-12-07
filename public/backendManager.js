@@ -43,60 +43,40 @@ class BackendManager {
   }
 
   async rlyManagerConnect() {
-    const ret = {
-      success: false,
-      data: undefined,
-      error: undefined,
-    };
+    let result = false;
     try {
-      ret.success = await this.relayjs.connect(data);
+      result = await this.relayjs.connect(data);
       this.__sendRlyManagerMessageToCbk();
     } catch (e) {
-      ret.success = false;
-      ret.error = e.message;
+      throw(e)
     }
-    return ret;
+    return result;
   }
 
   async rlyManagerDisconnect() {
-    const ret = {
-      success: false,
-      data: undefined,
-      error: undefined,
-    };
+    let result = false;
     try {
-      ret.success = await this.relayjs.disconnect();
+      result = await this.relayjs.disconnect();
       this.__sendRlyManagerMessageToCbk();
     } catch (e) {
-      ret.success = false;
-      ret.error = e.message;
+      throw(e)
     }
-    return ret;
+    return result;
   }
 
   async rlyManagerWrite(){
-    const ret = {
-      success: false,
-      data: undefined,
-      error: undefined,
-    };
+    let result = false;
     try {
-      ret.success = await relayjs.write(relay, value);
+      result = await relayjs.write(relay, value);
       this.__sendRlyManagerMessageToCbk();
     } catch (e) {
-      ret.success = false;
-      ret.error = e.message;
+      throw(e)
     }
-    return ret;
+    return result;
   }
 
   rlyManagerGetState(){
-    const ret = {
-      success: true,
-      data: undefined,
-      error: undefined,
-    };
-    ret.data = {
+    return {
       connected: this.relayjs.connected,
       port: this.relayjs.port,
       relays: this.relayjs.relays,
@@ -105,27 +85,14 @@ class BackendManager {
       errorMessage: undefined,
       errorDetails: undefined
     }
-    return ret;
   }
 
   rlyManagerGetRelay(relay){
-    const ret = {
-      success: true,
-      data: undefined,
-      error: undefined,
-    };
-    ret.data = relayjs.relays[relay];
-    return ret;
+    return relayjs.relays[relay];
   }
 
   rlyManagerGetRelays(){
-    const ret = {
-      success: true,
-      data: undefined,
-      error: undefined,
-    };
-    ret.data = relayjs.relays;
-    return ret;
+    return relayjs.relays;
   }
 }
 

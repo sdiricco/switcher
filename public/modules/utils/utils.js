@@ -20,12 +20,12 @@ const saveJSON = async function (file, jsonObj) {
     const json = JSON.stringify(jsonObj, null, 2);
     await fsPromises.writeFile(file, json);
   } catch (e) {
-    throw new Error(e);
+    throw e;
   }
 };
 
 /**
- * Saves a JSON object to file.
+ * Load a JSON.
  * @param {string} file Path of file to load
  */
 const loadJSON = async function (file) {
@@ -39,11 +39,6 @@ const loadJSON = async function (file) {
   return jsonObj;
 };
 
-/**
- * Saves a JSON object to file.
- * @param {string} path Path of output file
- * @param {Object} jsonObj The json object
- */
 const existsFile = async (file) => {
   try {
     await fsPromises.access(file);
@@ -70,4 +65,27 @@ const getUsbDevices = async() =>{
   return devices;
 }
 
-module.exports = {existsFile, loadJSON, saveJSON, getUsbDevices}
+const getAppConfig = async(appPath) => {
+  let appConfig = undefined;
+  try {
+    const isAppConfExsist = await existsFile(appPath);
+    if (!isAppConfExsist) {
+      return appConfig;
+    }
+    appConfig = await loadJSON(APP_CONFIG_PATH);
+  } catch (e) {
+    throw e
+  }
+  return appConfig;
+}
+
+const saveAppConfig = async(appPath, jsonObj) => {
+  try {
+    await saveJSON(appPath, jsonObj);
+  } catch (e) {
+    throw(e)
+  }
+  return true;
+}
+
+module.exports = {existsFile, loadJSON, saveJSON, getUsbDevices, getAppConfig, saveAppConfig}

@@ -186,6 +186,14 @@ class App extends React.Component {
         tip="Connecting..."
       >
         <AppRender
+          onClickSwitch={this.onClickSwitch}
+          onClickConnect={this.onClickConnect}
+          onClickDisconnect={this.onClickDisconnect}
+          onChangeLabel={this.onChangeLabel}
+          onOpenFile={this.onOpenFile}
+          onSaveFile={this.onSaveFile}
+          onSaveAsFile={this.onSaveAsFile}
+          onChangeUsbPort={this.onChangeUsbPort}
           {...this.state}
         />
       </Spin>
