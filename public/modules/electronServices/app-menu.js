@@ -1,10 +1,18 @@
 const isMac = process.platform === "darwin";
 const R = require("ramda")
+const {
+  Menu
+} = require("electron");
+
+function buildMenuFromTemplate(window, template){
+  const menu = Menu.buildFromTemplate(template);
+  window.setMenu(menu);
+}
 
 let defaultTemplate = [];
 let template = []
 
-function createMenuTemplate(app, onClickItem) {
+function createTemplate(app, window, onClickItem) {
   let __template = [
     // { role: 'appMenu' }
     ...(isMac
@@ -130,10 +138,12 @@ function createMenuTemplate(app, onClickItem) {
   ];
   template = R.clone(__template);
   defaultTemplate = R.clone(__template);
-  return template;
+  buildMenuFromTemplate(window, template)
 }
 
-function updateMenuItem(tree, content, __template){
+
+
+function updateTemplateItem(window, tree, content, __template){
   if (__template === undefined) {
     __template = template
   }
@@ -151,14 +161,14 @@ function updateMenuItem(tree, content, __template){
     for(let i = 0; i < __template.length; i++){
       if(__template[i].label === label){
         tree.shift();
-        updateMenuItem(tree, content, __template[i].submenu);
-        return template;
+        updateTemplateItem(window, tree, content, __template[i].submenu);
+        buildMenuFromTemplate(window, template)
       }
     }
   }
 }
 
-module.exports = {updateMenuItem, createMenuTemplate}
+module.exports = {updateTemplateItem, createTemplate}
 
 
 

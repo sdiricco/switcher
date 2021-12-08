@@ -3,7 +3,6 @@ const {
   BrowserWindow,
   ipcMain,
   dialog,
-  Menu
 } = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
@@ -153,17 +152,13 @@ function sendUsbDetectionMessage(devices){
       click: ()=> onClickMenuItem(["Settings", "Port", device.port])
     }
   })
-  const template = appMenu.updateMenuItem(["Settings", "Port"], {
+  appMenu.updateTemplateItem(mainWindow, ["Settings", "Port"], {
     label: "Port",
     submenu: [
       {label: "Auto", click: ()=> onClickMenuItem(["Settings", "Port", "Auto"])},
       ...portItems
     ]
   });
-  console.log(template)
-  const menu = Menu.buildFromTemplate(template);
-  mainWindow.setMenu(menu);
-  mainWindow.webContents.send("usbdetection:change", devices);
 }
 
 ipcMain.handle("usbdetection:getdevices", async (event, data) => {
@@ -184,23 +179,24 @@ ipcMain.handle("app:saveconf", async (event, jsonObj) => {
 ////////////////////////////////////////// handle extras \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 ipcMain.handle("dom:loaded", async (event, jsonObj) => {
-  let template = appMenu.createMenuTemplate(app, onClickMenuItem)
+  appMenu.createTemplate(app, mainWindow, onClickMenuItem)
+
   const devices = await backendManager.usbDetectionGetDevices();
+
   const portItems = devices.map(device => {
     return {
       label: device.port,
       click: ()=> onClickMenuItem(["Settings", "Port", device.port])
     }
   })
-  template = appMenu.updateMenuItem(["Settings", "Port"], {
+
+  appMenu.updateTemplateItem(mainWindow, ["Settings", "Port"], {
     label: "Port",
     submenu: [
       {label: "Auto", click: ()=> onClickMenuItem(["Settings", "Port", "Auto"])},
       ...portItems
     ]
   });
-  const menu = Menu.buildFromTemplate(template);
-  mainWindow.setMenu(menu);
 });
 
 function onClickMenuItem(tree){
