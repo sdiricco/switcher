@@ -1,16 +1,19 @@
-const isMac = process.platform === "darwin";
-const R = require("ramda")
-const {
-  Menu
-} = require("electron");
+////////////////////////////////////// Global Requires \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+const { Menu } = require("electron");
+const R = require("ramda");
 
-function buildMenuFromTemplate(window, template){
+////////////////////////////////////// Global Constants \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+const isMac = process.platform === "darwin";
+
+////////////////////////////////////// Global Variables \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+let defaultTemplate = [];
+let template = [];
+
+////////////////////////////////////// Global Functions \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+function buildMenuFromTemplate(window, template) {
   const menu = Menu.buildFromTemplate(template);
   window.setMenu(menu);
 }
-
-let defaultTemplate = [];
-let template = []
 
 function createTemplate(app, window, onClickItem) {
   let __template = [
@@ -35,22 +38,24 @@ function createTemplate(app, window, onClickItem) {
       : []),
     // { role: 'fileMenu' }
     {
+      _id: 1,
+      _parentId: null,
       label: "File",
       submenu: [
         {
           label: "Open",
-          click: () => onClickItem(["File", "Open"])
+          click: () => onClickItem(["File", "Open"]),
         },
         { type: "separator" },
         {
           label: "Save",
           accelerator: "Ctrl + S",
-          click: () => onClickItem(["File", "Save"])
+          click: () => onClickItem(["File", "Save"]),
         },
         {
           label: "Save as..",
           accelerator: "Ctrl + Shift + S",
-          click: () => onClickItem(["File", "Save as.."])
+          click: () => onClickItem(["File", "Save as.."]),
         },
         { type: "separator" },
         isMac ? { role: "close" } : { role: "quit" },
@@ -58,6 +63,8 @@ function createTemplate(app, window, onClickItem) {
     },
     // { role: 'editMenu' }
     {
+      _id: 2,
+      _parentId: null,
       label: "Edit",
       submenu: [
         { role: "undo" },
@@ -82,6 +89,8 @@ function createTemplate(app, window, onClickItem) {
     },
     // { role: 'viewMenu' }
     {
+      _id: 3,
+      _parentId: null,
       label: "View",
       submenu: [
         { role: "reload" },
@@ -97,6 +106,8 @@ function createTemplate(app, window, onClickItem) {
     },
     // { role: 'windowMenu' }
     {
+      _id: 4,
+      _parentId: null,
       label: "Window",
       submenu: [
         { role: "minimize" },
@@ -112,65 +123,66 @@ function createTemplate(app, window, onClickItem) {
       ],
     },
     {
+      _id: 5,
+      _parentId: null,
       label: "Settings",
       submenu: [
-        { type: "checkbox", label: "Autosave", checked: true },
+        {
+          type: "checkbox",
+          label: "Autosave",
+          checked: true,
+        },
         {
           label: "Port",
           submenu: [
             {
               label: "Auto",
-              click: () => onClickItem(["Settings", "Port", "Auto"])
+              click: () => onClickItem(["Settings", "Port", "Auto"]),
             },
           ],
         },
       ],
     },
     {
+      _id: 6,
+      _parentId: null,
       role: "help",
       submenu: [
         {
           label: "Learn More",
-          click: () => onClickItem(["help", "Learn More"])
+          click: () => onClickItem(["help", "Learn More"]),
         },
       ],
     },
   ];
   template = R.clone(__template);
   defaultTemplate = R.clone(__template);
-  buildMenuFromTemplate(window, template)
+  buildMenuFromTemplate(window, template);
 }
 
-
-
-function updateTemplateItem(window, tree, content, __template){
+function updateTemplateItem(window, tree, content, __template) {
   if (__template === undefined) {
-    __template = template
+    __template = template;
   }
   if (tree.length === 1) {
     const label = tree[0];
-    for(let i = 0; i < __template.length; i++){
-      if(__template[i].label === label){
+    for (let i = 0; i < __template.length; i++) {
+      if (__template[i].label === label) {
         __template[i] = content;
         return true;
       }
     }
-  }
-  else{
+  } else {
     const label = tree[0];
-    for(let i = 0; i < __template.length; i++){
-      if(__template[i].label === label){
+    for (let i = 0; i < __template.length; i++) {
+      if (__template[i].label === label) {
         tree.shift();
         updateTemplateItem(window, tree, content, __template[i].submenu);
-        buildMenuFromTemplate(window, template)
+        buildMenuFromTemplate(window, template);
       }
     }
   }
 }
 
-module.exports = {updateTemplateItem, createTemplate}
-
-
-
-
-
+////////////////////////////////////// Exports \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+module.exports = { updateTemplateItem, createTemplate };
