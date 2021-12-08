@@ -3,236 +3,22 @@ const {
   BrowserWindow,
   ipcMain,
   dialog,
-  ipcRenderer,
-  Menu,
+  Menu
 } = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
-const { RelayJs } = require("@sdiricco/relayjs");
-const {
-  existsFile,
-  loadJSON,
-  saveJSON,
-  getUsbDevices,
-} = require("./modules/utils/utils");
-const usbDetect = require("usb-detection");
+const appMenu = require("./modules/electronServices/app-menu")
+const { BackendManager } = require("./backendManager");
 const fs = require("fs");
-const contextMenu = require("electron-context-menu");
 
-contextMenu({
-  prepend: (defaultActions, parameters, browserWindow) => [
-    {
-      label: "Rainbow",
-      // Only show it when right-clicking images
-      visible: parameters.mediaType === "image",
-    },
-    {
-      label: "Search Google for “{selection}”",
-      // Only show it when right-clicking text
-      visible: parameters.selectionText.trim().length > 0,
-      click: () => {
-        shell.openExternal(
-          `https://google.com/search?q=${encodeURIComponent(
-            parameters.selectionText
-          )}`
-        );
-      },
-    },
-  ],
-});
+const backendManager = new BackendManager();
 
-const isReloaded = false;
 let mainWindow = null;
 let menu = null;
 const gotTheLock = app.requestSingleInstanceLock();
 const APP_PATH = app.getPath("appData");
 const APP_CONFIG_PATH = path.join(APP_PATH, "relayjs-data", "config.json");
-const RELAY_MODULE = 1;
 const isMac = process.platform === "darwin";
-const template = [
-  // { role: 'appMenu' }
-  ...(isMac
-    ? [
-        {
-          label: app.name,
-          submenu: [
-            { role: "about" },
-            { type: "separator" },
-            { role: "services" },
-            { type: "separator" },
-            { role: "hide" },
-            { role: "hideOthers" },
-            { role: "unhide" },
-            { type: "separator" },
-            { role: "quit" },
-          ],
-        },
-      ]
-    : []),
-  // { role: 'fileMenu' }
-  {
-    label: "File",
-    submenu: [
-      {
-        label: "Open",
-        click: onMenuFileOpen,
-      },
-      { type: "separator" },
-      {
-        label: "Save",
-        accelerator: "Ctrl + S",
-        click: onMenuFileSave,
-      },
-      {
-        label: "Save as..",
-        accelerator: "Ctrl + Shift + S",
-        click: onMenuFileSaveAs,
-      },
-      { type: "separator" },
-      isMac ? { role: "close" } : { role: "quit" },
-    ],
-  },
-  // { role: 'editMenu' }
-  {
-    label: "Edit",
-    submenu: [
-      { role: "undo" },
-      { role: "redo" },
-      { type: "separator" },
-      { role: "cut" },
-      { role: "copy" },
-      { role: "paste" },
-      ...(isMac
-        ? [
-            { role: "pasteAndMatchStyle" },
-            { role: "delete" },
-            { role: "selectAll" },
-            { type: "separator" },
-            {
-              label: "Speech",
-              submenu: [{ role: "startSpeaking" }, { role: "stopSpeaking" }],
-            },
-          ]
-        : [{ role: "delete" }, { type: "separator" }, { role: "selectAll" }]),
-    ],
-  },
-  // { role: 'viewMenu' }
-  {
-    label: "View",
-    submenu: [
-      { role: "reload" },
-      { role: "forceReload" },
-      { role: "toggleDevTools" },
-      { type: "separator" },
-      { role: "resetZoom" },
-      { role: "zoomIn" },
-      { role: "zoomOut" },
-      { type: "separator" },
-      { role: "togglefullscreen" },
-    ],
-  },
-  // { role: 'windowMenu' }
-  {
-    label: "Window",
-    submenu: [
-      { role: "minimize" },
-      { role: "zoom" },
-      ...(isMac
-        ? [
-            { type: "separator" },
-            { role: "front" },
-            { type: "separator" },
-            { role: "window" },
-          ]
-        : [{ role: "close" }]),
-    ],
-  },
-  {
-    label: "Settings",
-    submenu: [
-      { type: "checkbox", label: "Autosave", checked: true },
-      {
-        label: "Port",
-        submenu: [
-          {
-            label: "Auto",
-            click: () => {
-              mainWindow.webContents.send("port:change", "Auto");
-            },
-          },
-        ],
-      },
-    ],
-  },
-  {
-    role: "help",
-    submenu: [
-      {
-        label: "Learn More",
-      },
-    ],
-  },
-];
-
-function onMenuFileOpen() {
-  console.log("before open");
-  if (!mainWindow) {
-    return;
-  }
-  console.log("open");
-  mainWindow.webContents.send("menu:file:open", true);
-}
-
-function onMenuFileSave() {
-  console.log("before save");
-  if (!mainWindow) {
-    return;
-  }
-  console.log("save");
-
-  mainWindow.webContents.send("menu:file:save", true);
-}
-
-function onMenuFileSaveAs() {
-  console.log("before save as");
-  if (!mainWindow) {
-    return;
-  }
-  console.log("save as");
-  mainWindow.webContents.send("menu:file:saveas", true);
-}
-
-function updateMenuTemplate(devices) {
-  const usbitems = devices.map((device) => {
-    return {
-      label: device.port,
-      click: () => {
-        mainWindow.webContents.send("port:change", device.port);
-      },
-    };
-  });
-
-  const items = [
-    {
-      label: "Auto",
-      click: () => {
-        mainWindow.webContents.send("port:change", "Auto");
-      },
-    },
-    ...usbitems,
-  ];
-
-  const fileIdx = template.findIndex((el) => el.label === "Settings");
-  if (fileIdx < 0 || !template[fileIdx].submenu) {
-    return;
-  }
-  const portIdx = template[fileIdx].submenu.findIndex(
-    (el) => el.label === "Port"
-  );
-  template[fileIdx].submenu[portIdx].submenu = items;
-  const menu = Menu.buildFromTemplate(template);
-  mainWindow.setMenu(menu);
-}
 
 const showMessageBox = (options) => {
   let __options = {
@@ -280,12 +66,13 @@ if (!gotTheLock) {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    autoHideMenuBar: true,
+    autoHideMenuBar: false,
     minWidth: 400,
     minHeight: 200,
     show: true,
     title: "Relay App",
     webPreferences: {
+      backgroundThrottling: false,
       nodeIntegration: true,
       enableRemoteModule: true,
       contextIsolation: false,
@@ -308,7 +95,6 @@ function createWindow() {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
-  /* mainWindow.removeMenu(); */
 
   if (isDev) {
     const {
@@ -323,158 +109,143 @@ function createWindow() {
   }
 }
 
-////////////////////////////////////////// handle Relaysjs \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+////////////////////////////////////////// handle Relay Manager \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-let __rlyState = () => {
-  return {
-    connected: relayjs.connected,
-    port: relayjs.port,
-    relays: relayjs.relays,
-  };
-};
+backendManager.setRlyManagerEvtCbk(sendRlyManagerMessage);
 
-let sendRlyState = (e) => {
-  const defaultError = {
-    type: "",
-    message: "",
-    details: "",
-  };
-  const error = e ? e : defaultError;
-  const rlyState = __rlyState();
-  mainWindow.webContents.send("relayjs-updatestate", error, rlyState);
-};
+function sendRlyManagerMessage(message){
+  mainWindow.webContents.send("relayjs:message", message);
+}
 
-let relayjs = new RelayJs({
-  inverseOut: true,
-});
-relayjs.on("error", sendRlyState);
-
-//connect
 ipcMain.handle("relayjs:connect", async (event, data) => {
-  const ret = {
-    success: false,
-    error: "",
-  };
-  try {
-    console.log(data);
-    ret.success = await relayjs.connect(data);
-    sendRlyState();
-  } catch (e) {
-    sendRlyState({
-      type: "",
-      message: e.message,
-      details: "",
-    });
-    ret.success = false;
-    ret.error = e;
-  }
-  return ret;
+  return  await backendManager.rlyManagerConnect(data);
 });
 
-//connect
-ipcMain.handle("relayjs-disconnect", async (event, data) => {
-  const ret = {
-    success: false,
-    error: "",
-  };
-  try {
-    ret.success = await relayjs.disconnect();
-    sendRlyState({
-      type: "",
-      message: "Board disconnected",
-      details: "",
-    });
-  } catch (e) {
-    ret.success = false;
-    ret.error = e;
-  }
-  return ret;
+ipcMain.handle("relayjs:disconnect", async (event, data) => {
+  return await backendManager.rlyManagerDisconnect(data);
 });
 
-ipcMain.handle("relayjs-write", async (event, relay, value) => {
-  const ret = {
-    success: false,
-    error: "",
-  };
-  try {
-    ret.success = await relayjs.write(relay, value);
-    sendRlyState();
-  } catch (e) {
-    ret.success = false;
-    ret.error = e;
-  }
-  return ret;
+ipcMain.handle("relayjs:write", async (event, relay, value) => {
+  return await backendManager.rlyManagerWrite(relay, value);
 });
 
-ipcMain.handle("relayjs-getstate", (event, data) => {
-  return __rlyState();
+ipcMain.handle("relayjs:getstate", (event, data) => {
+  return backendManager.rlyManagerGetState();
 });
 
-ipcMain.handle("relayjs-getrelay", (event, relay) => {
-  return relayjs.relays[relay];
+ipcMain.handle("relayjs:getrelay", (event, relay) => {
+  return backendManager.rlyManagerGetRelay(relay)
 });
 
-ipcMain.handle("relayjs-getrelays", (event, data) => {
-  return relayjs.relays;
+ipcMain.handle("relayjs:getrelays", (event, data) => {
+  return backendManager.rlyManagerGetRelays();
 });
 
-////////////////////////////////////////// utils \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+////////////////////////////////////////// handle Usb detection \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-usbDetect.startMonitoring();
-usbDetect.on("change", async () => {
-  const devices = await getUsbDevices();
-  updateMenuTemplate(devices);
-});
 
-ipcMain.handle("utils:get-usb-devices", async (event, data) => {
-  const devices = await getUsbDevices();
-  return devices;
-});
+backendManager.setUsbDetectionEvtCbk(sendUsbDetectionMessage);
 
-ipcMain.handle("utils:get-app-conf", async (event, data) => {
-  const res = {
-    success: false,
-    error: "",
-    data: {},
-  };
-  try {
-    const isAppConfExsist = await existsFile(APP_CONFIG_PATH);
-    if (!isAppConfExsist) {
-      res.success = false;
-      return res;
+function sendUsbDetectionMessage(devices){
+  const portItems = devices.map(device => {
+    return {
+      label: device.port,
+      click: ()=> onClickMenuItem(["Settings", "Port", device.port])
     }
-    const jsonObj = await loadJSON(APP_CONFIG_PATH);
-    res.success = true;
-    res.data = jsonObj;
-  } catch (e) {
-    res.error = e.message;
-    res.success = false;
-  }
-  return res;
+  })
+  const template = appMenu.updateMenuItem(["Settings", "Port"], {
+    label: "Port",
+    submenu: [
+      {label: "Auto", click: ()=> onClickMenuItem(["Settings", "Port", "Auto"])},
+      ...portItems
+    ]
+  });
+  console.log(template)
+  const menu = Menu.buildFromTemplate(template);
+  mainWindow.setMenu(menu);
+  mainWindow.webContents.send("usbdetection:change", devices);
+}
+
+ipcMain.handle("usbdetection:getdevices", async (event, data) => {
+  return await backendManager.usbDetectionGetDevices();
 });
 
-ipcMain.handle("utils:save-app-conf", async (event, jsonObj) => {
-  const ret = {
-    success: false,
-    error: "",
-    data: {},
-  };
-  try {
-    await saveJSON(APP_CONFIG_PATH, jsonObj);
-    ret.success = true;
-  } catch (e) {
-    ret.success = false;
-    ret.error = e.message;
-  }
-  return ret;
+////////////////////////////////////////// handle app config \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+
+ipcMain.handle("app:getconf", async (event, data) => {
+  return await backendManager.appGetConfig();
 });
+
+ipcMain.handle("app:saveconf", async (event, jsonObj) => {
+  return await backendManager.appSaveConfig();
+});
+
+////////////////////////////////////////// handle extras \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 ipcMain.handle("dom:loaded", async (event, jsonObj) => {
-  const devices = await getUsbDevices();
-  updateMenuTemplate(devices);
-  mainWindow.autoHideMenuBar = false;
-  mainWindow.menuBarVisible = true;
+  let template = appMenu.createMenuTemplate(app, onClickMenuItem)
+  const devices = await backendManager.usbDetectionGetDevices();
+  const portItems = devices.map(device => {
+    return {
+      label: device.port,
+      click: ()=> onClickMenuItem(["Settings", "Port", device.port])
+    }
+  })
+  template = appMenu.updateMenuItem(["Settings", "Port"], {
+    label: "Port",
+    submenu: [
+      {label: "Auto", click: ()=> onClickMenuItem(["Settings", "Port", "Auto"])},
+      ...portItems
+    ]
+  });
+  const menu = Menu.buildFromTemplate(template);
+  mainWindow.setMenu(menu);
 });
+
+function onClickMenuItem(tree){
+  switch (tree[0]) {
+    case "File":
+      switch (tree[1]) {
+        case "Open":
+          onClickOpen();
+          break;
+        case "Save":
+          onClickSave();
+          break;
+        case "Save as..":
+          onClickSaveAs();
+        default:
+          break;
+      }
+      break;
+    case "Settings":
+      switch (tree[1]) {
+        case "Port":
+          onChangePort(tree[2]);
+          break;
+        default:
+          break;
+      }
+    default:
+      break;
+  }
+}
+
+function onClickOpen(){
+  console.log("open!")
+}
+
+function onClickSave(){
+  console.log("save!")
+}
+function onClickSaveAs(){
+  console.log("save as!")
+}
+
+function onChangePort(port){
+  mainWindow.webContents.send("port:change", port);
+}
 
 ipcMain.handle("utils:open-custom-app-config", async (event, filter) => {
   try {

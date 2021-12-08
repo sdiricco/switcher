@@ -53,7 +53,6 @@ const existsFile = async (file) => {
 
 const getUsbDevices = async() =>{
   const spdevices = await SerialPort.list();
-  console.log(spdevices)
   const devices = spdevices
     .map((device) => {
       return {
@@ -65,27 +64,4 @@ const getUsbDevices = async() =>{
   return devices;
 }
 
-const getAppConfig = async(appPath) => {
-  let appConfig = undefined;
-  try {
-    const isAppConfExsist = await existsFile(appPath);
-    if (!isAppConfExsist) {
-      return appConfig;
-    }
-    appConfig = await loadJSON(APP_CONFIG_PATH);
-  } catch (e) {
-    throw e
-  }
-  return appConfig;
-}
-
-const saveAppConfig = async(appPath, jsonObj) => {
-  try {
-    await saveJSON(appPath, jsonObj);
-  } catch (e) {
-    throw(e)
-  }
-  return true;
-}
-
-module.exports = {existsFile, loadJSON, saveJSON, getUsbDevices, getAppConfig, saveAppConfig}
+module.exports = {existsFile, loadJSON, saveJSON, getUsbDevices}

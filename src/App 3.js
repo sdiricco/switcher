@@ -93,22 +93,22 @@ class App extends React.Component {
     const appConfig = {
       labels: this.state.labels,
     };
-    const res = await ipcRenderer.invoke("app:saveconf", appConfig);
+    const res = await ipcRenderer.invoke("utils:save-app-conf", appConfig);
   }
 
   async getAppConfig() {
-    const res = await ipcRenderer.invoke("app:getconf");
+    const res = await ipcRenderer.invoke("utils:get-app-conf");
     this.setState({
       labels: res.data.labels,
     });
   }
 
-  onRlyUpdate(event, rlyState) {
+  onRlyUpdate(event, e, rlyState) {
     this.setState({
+      eMessage: `${e.message}. ${e.details}`,
       connected: rlyState.connected,
       portConnected: rlyState.port,
       relays: rlyState.relays,
-      eMessage: rlyState.errorMessage,
     });
   }
 
@@ -128,7 +128,7 @@ class App extends React.Component {
       isbusy: true,
     });
     const isOpen = Boolean(el.state);
-    const res = await ipcRenderer.invoke("relayjs:write", idx, Number(!isOpen));
+    const res = await ipcRenderer.invoke("relayjs-write", idx, Number(!isOpen));
     this.setState({
       isbusy: false,
     });
@@ -139,44 +139,34 @@ class App extends React.Component {
       loading: true,
     });
     console.log("connect to portConnected:", this.state.portSelected);
-    try {
-      await ipcRenderer.invoke(
-        "relayjs:connect",
-        this.state.portSelected
-      );
-    } catch (e) {
-      console.log(e)
-      this.setState({
-        eMessage: e.message,
-        loading: false,
-      })
-      return;
-    }
-
+    const res = await ipcRenderer.invoke(
+      "relayjs:connect",
+      this.state.portSelected
+    );
     this.setState({
       loading: false,
     });
   }
 
   async disconnect() {
-    const res = await ipcRenderer.invoke("relayjs:disconnect");
+    const res = await ipcRenderer.invoke("relayjs-disconnect");
   }
 
   async componentDidMount() {
-    // ipcRenderer.off("menu:file:open", this.onOpenFile);
-    // ipcRenderer.off("menu:file:save", this.onSaveFile);
-    // ipcRenderer.off("menu:file:saveas", this.onSaveAsFile);
+    ipcRenderer.off("menu:file:open", this.onOpenFile);
+    ipcRenderer.off("menu:file:save", this.onSaveFile);
+    ipcRenderer.off("menu:file:saveas", this.onSaveAsFile);
     ipcRenderer.off("port:change", this.onChangeUsbPort);
-    ipcRenderer.off("relayjs:message", this.onRlyUpdate);
+    ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
 
-    // ipcRenderer.on("menu:file:open", this.onOpenFile);
-    // ipcRenderer.on("menu:file:save", this.onSaveFile);
-    // ipcRenderer.on("menu:file:saveas", this.onSaveAsFile);
+    ipcRenderer.on("menu:file:open", this.onOpenFile);
+    ipcRenderer.on("menu:file:save", this.onSaveFile);
+    ipcRenderer.on("menu:file:saveas", this.onSaveAsFile);
     ipcRenderer.on("port:change", this.onChangeUsbPort);
-    ipcRenderer.on("relayjs:message", this.onRlyUpdate);
+    ipcRenderer.on("relayjs-updatestate", this.onRlyUpdate);
 
     await ipcRenderer.invoke("dom:loaded");
-    // await this.getAppConfig();
+    await this.getAppConfig();
     await this.connect();
   }
 

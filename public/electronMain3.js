@@ -8,21 +8,16 @@ const {
 } = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
-const { BackendManager } = require("./backendManager");
+const { RelayJs } = require("@sdiricco/relayjs");
 const {
   existsFile,
   loadJSON,
   saveJSON,
   getUsbDevices,
-} = require("./modules/utils/utils");
+} = require("./modules/utils");
 const usbDetect = require("usb-detection");
 const fs = require("fs");
 const contextMenu = require("electron-context-menu");
-
-const backendManager = new BackendManager();
-backendManager.rlyManagerEvtCbk((message) => {
-  mainWindow.webContents.send("relayjs:message", message);
-});
 
 contextMenu({
   prepend: (defaultActions, parameters, browserWindow) => [
@@ -155,7 +150,7 @@ const template = [
   {
     label: "Settings",
     submenu: [
-      { type: "checkbox", label: "Autosave", checked: true },
+      { type: "checkbox", id:"settings/autosave", label: "Autosave", checked: true },
       {
         label: "Port",
         submenu: [
@@ -235,8 +230,12 @@ function updateMenuTemplate(devices) {
     (el) => el.label === "Port"
   );
   template[fileIdx].submenu[portIdx].submenu = items;
+
+
+
   const menu = Menu.buildFromTemplate(template);
   mainWindow.setMenu(menu);
+
 }
 
 const showMessageBox = (options) => {
@@ -291,7 +290,6 @@ function createWindow() {
     show: true,
     title: "Relay App",
     webPreferences: {
-      backgroundThrottling: false,
       nodeIntegration: true,
       enableRemoteModule: true,
       contextIsolation: false,
@@ -331,29 +329,97 @@ function createWindow() {
 
 ////////////////////////////////////////// handle Relaysjs \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
+let __rlyState = () => {
+  return {
+    connected: relayjs.connected,
+    port: relayjs.port,
+    relays: relayjs.relays,
+  };
+};
 
+let sendRlyState = (e) => {
+  const defaultError = {
+    type: "",
+    message: "",
+    details: "",
+  };
+  const error = e ? e : defaultError;
+  const rlyState = __rlyState();
+  mainWindow.webContents.send("relayjs-updatestate", error, rlyState);
+};
+
+let relayjs = new RelayJs({
+  inverseOut: true,
+});
+relayjs.on("error", sendRlyState);
+
+//connect
 ipcMain.handle("relayjs:connect", async (event, data) => {
-  return await backendManager.rlyManagerConnect(data);
+  const ret = {
+    success: false,
+    error: "",
+  };
+  try {
+    console.log(data);
+    ret.success = await relayjs.connect(data);
+    sendRlyState();
+  } catch (e) {
+    sendRlyState({
+      type: "",
+      message: e.message,
+      details: "",
+    });
+    ret.success = false;
+    ret.error = e;
+  }
+  return ret;
 });
 
-ipcMain.handle("relayjs:disconnect", async (event, data) => {
-  return await backendManager.rlyManagerDisconnect(data);
+//connect
+ipcMain.handle("relayjs-disconnect", async (event, data) => {
+  const ret = {
+    success: false,
+    error: "",
+  };
+  try {
+    ret.success = await relayjs.disconnect();
+    sendRlyState({
+      type: "",
+      message: "Board disconnected",
+      details: "",
+    });
+  } catch (e) {
+    ret.success = false;
+    ret.error = e;
+  }
+  return ret;
 });
 
-ipcMain.handle("relayjs:write", async (event, relay, value) => {
-  return await backendManager.rlyManagerWrite(relay, value);
+ipcMain.handle("relayjs-write", async (event, relay, value) => {
+  const ret = {
+    success: false,
+    error: "",
+  };
+  try {
+    ret.success = await relayjs.write(relay, value);
+    sendRlyState();
+  } catch (e) {
+    ret.success = false;
+    ret.error = e;
+  }
+  return ret;
 });
 
-ipcMain.handle("relayjs:getstate", (event, data) => {
-  return backendManager.rlyManagerGetState();
+ipcMain.handle("relayjs-getstate", (event, data) => {
+  return __rlyState();
 });
 
-ipcMain.handle("relayjs:getrelay", (event, relay) => {
-  return backendManager.rlyManagerGetRelay(relay)
+ipcMain.handle("relayjs-getrelay", (event, relay) => {
+  return relayjs.relays[relay];
 });
 
 ipcMain.handle("relayjs-getrelays", (event, data) => {
-  return backendManager.rlyManagerGetRelays();
+  return relayjs.relays;
 });
 
 ////////////////////////////////////////// utils \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -370,11 +436,41 @@ ipcMain.handle("utils:get-usb-devices", async (event, data) => {
 });
 
 ipcMain.handle("utils:get-app-conf", async (event, data) => {
-
+  const res = {
+    success: false,
+    error: "",
+    data: {},
+  };
+  try {
+    const isAppConfExsist = await existsFile(APP_CONFIG_PATH);
+    if (!isAppConfExsist) {
+      res.success = false;
+      return res;
+    }
+    const jsonObj = await loadJSON(APP_CONFIG_PATH);
+    res.success = true;
+    res.data = jsonObj;
+  } catch (e) {
+    res.error = e.message;
+    res.success = false;
+  }
+  return res;
 });
 
 ipcMain.handle("utils:save-app-conf", async (event, jsonObj) => {
-
+  const ret = {
+    success: false,
+    error: "",
+    data: {},
+  };
+  try {
+    await saveJSON(APP_CONFIG_PATH, jsonObj);
+    ret.success = true;
+  } catch (e) {
+    ret.success = false;
+    ret.error = e.message;
+  }
+  return ret;
 });
 
 ipcMain.handle("dom:loaded", async (event, jsonObj) => {

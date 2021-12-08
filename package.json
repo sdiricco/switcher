@@ -48,7 +48,7 @@
     "electron:serve": "concurrently -k \"cross-env BROWSER=none yarn start\" \"yarn electron:start\"",
     "electron:build": "yarn build && electron-builder -c.extraMetadata.main=build/electronMain.js",
     "electron:start": "wait-on tcp:3000 && electron .",
-    "electron-rebuild": "./node_modules/.bin/electron-rebuild",
+    "electron:rebuild": "./node_modules/.bin/electron-rebuild",
     "electron-rebuild-serialport": "electron-rebuild -f -w serialport"
   },
   "build": {

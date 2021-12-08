@@ -1,30 +1,67 @@
 const { RelayJs } = require("@sdiricco/relayjs");
+const usbDetect = require("usb-detection");
+const {
+  existsFile,
+  loadJSON,
+  saveJSON,
+  getUsbDevices,
+  getAppConfig,
+  saveAppConfig,
+} = require("./modules/utils");
 
 class BackendManager {
   constructor() {
     this.relayjs = new RelayJs({
       inverseOut: true,
     });
-    this.rlyManagerEvtCbk = undefined;
+    usbDetect.startMonitoring();
 
+    this.rlyManagerEvtCbk = undefined;
+    this.usbDetectionEvtCbk = undefined;
+
+
+    this.__sendRlyManagerMessageToCbk =
+      this.__sendRlyManagerMessageToCbk.bind(this);
     this.__onRlyManagerErr = this.__onRlyManagerErr.bind(this);
-    this.__sendRlyManagerMessageToCbk = this.__sendRlyManagerMessageToCbk.bind(this);
-    this.connect = this.connect.bind(this);
-    this.relayjs.on("error", this.__onRelayJsError);
+    this.setRlyManagerEvtCbk = this.setRlyManagerEvtCbk.bind(this);
+    this.rlyManagerConnect = this.rlyManagerConnect.bind(this);
+    this.rlyManagerDisconnect = this.rlyManagerDisconnect.bind(this);
+    this.rlyManagerWrite = this.rlyManagerWrite.bind(this);
+    this.rlyManagerGetState = this.rlyManagerGetState.bind(this);
+    this.rlyManagerGetRelay = this.rlyManagerGetRelay.bind(this);
+    this.rlyManagerGetRelays = this.rlyManagerGetRelays.bind(this);
+
+    this.__onUsbDetectionChange = this.__onUsbDetectionChange.bind(this);
+    this.setUsbDetectionEvtCbk = this.setUsbDetectionEvtCbk.bind(this);
+
+    this.relayjs.on("error", this.__onRlyManagerErr);
+    usbDetect.on("change", this.__onUsbDetectionChange);
   }
 
-  set rlyManagerEvtCbk(callback) {
+  setRlyManagerEvtCbk(callback) {
     if (typeof callback === "function") {
       this.rlyManagerEvtCbk = callback;
     }
   }
 
-  get rlyManagerEvtCbk() {
-    return this.rlyManagerEvtCbk;
+  setUsbDetectionEvtCbk(callback) {
+    if (typeof callback === "function") {
+      this.usbDetectionEvtCbk = callback;
+    }
   }
 
   __onRlyManagerErr(event, e) {
     this.__sendRlyManagerMessageToCbk(e);
+  }
+
+  async __onUsbDetectionChange(event, e) {
+    let devices = [];
+    try {
+      devices = await getUsbDevices();
+    } catch (e) {
+      throw e;
+    }
+    this.usbDetectionEvtCbk(devices);
   }
 
   __sendRlyManagerMessageToCbk(e) {
@@ -35,20 +72,20 @@ class BackendManager {
         relays: this.relayjs.relays,
         error: e ? true : false,
         errorType: e ? e.type : "",
-        errorMessage: e? e.message : "",
-        errorDetails: e? e.details : ""
-      }
+        errorMessage: e ? e.message : "",
+        errorDetails: e ? e.details : "",
+      };
       this.rlyManagerEvtCbk(rlyMessage);
     }
   }
 
-  async rlyManagerConnect() {
+  async rlyManagerConnect(data) {
     let result = false;
     try {
       result = await this.relayjs.connect(data);
       this.__sendRlyManagerMessageToCbk();
     } catch (e) {
-      throw(e)
+      throw e;
     }
     return result;
   }
@@ -59,23 +96,23 @@ class BackendManager {
       result = await this.relayjs.disconnect();
       this.__sendRlyManagerMessageToCbk();
     } catch (e) {
-      throw(e)
+      throw e;
     }
     return result;
   }
 
-  async rlyManagerWrite(){
+  async rlyManagerWrite(relay, value) {
     let result = false;
     try {
-      result = await relayjs.write(relay, value);
+      result = await this.relayjs.write(relay, value);
       this.__sendRlyManagerMessageToCbk();
     } catch (e) {
-      throw(e)
+      throw e;
     }
     return result;
   }
 
-  rlyManagerGetState(){
+  rlyManagerGetState() {
     return {
       connected: this.relayjs.connected,
       port: this.relayjs.port,
@@ -83,19 +120,46 @@ class BackendManager {
       error: undefined,
       errorType: undefined,
       errorMessage: undefined,
-      errorDetails: undefined
-    }
+      errorDetails: undefined,
+    };
   }
 
-  rlyManagerGetRelay(relay){
+  rlyManagerGetRelay(relay) {
     return relayjs.relays[relay];
   }
 
-  rlyManagerGetRelays(){
+  rlyManagerGetRelays() {
     return relayjs.relays;
+  }
+
+  async usbDetectionGetDevices(){
+    return await getUsbDevices();
+  }
+
+  async appSaveConfig(appPath, jsonObj){
+    try {
+      await saveJSON(appPath, jsonObj);
+    } catch (e) {
+      throw(e)
+    }
+    return true;
+  }
+
+  async appGetConfig(appPath){
+    let appConfig = undefined;
+    try {
+      const isAppConfExsist = await existsFile(appPath);
+      if (!isAppConfExsist) {
+        return appConfig;
+      }
+      appConfig = await loadJSON(APP_CONFIG_PATH);
+    } catch (e) {
+      throw e
+    }
+    return appConfig;
   }
 }
 
 module.exports = {
-  BackendManager
+  BackendManager,
 };
