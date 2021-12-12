@@ -10,7 +10,11 @@ const {
 } = require("./modules/utils");
 
 class BackendManager {
-  constructor() {
+  constructor({ appSettingsPath = undefined, appConfigPath = undefined } = {}) {
+
+    this.appSettingsPath = appSettingsPath;
+    this.appConfigPath = appConfigPath;
+
     this.relayjs = new RelayJs({
       inverseOut: true,
     });
@@ -18,7 +22,6 @@ class BackendManager {
 
     this.rlyManagerEvtCbk = undefined;
     this.usbDetectionEvtCbk = undefined;
-
 
     this.__sendRlyManagerMessageToCbk =
       this.__sendRlyManagerMessageToCbk.bind(this);
@@ -132,31 +135,57 @@ class BackendManager {
     return relayjs.relays;
   }
 
-  async usbDetectionGetDevices(){
+  async usbDetectionGetDevices() {
     return await getUsbDevices();
   }
 
-  async appSaveConfig(appPath, jsonObj){
+  async appSaveConfig({
+    path = this.appConfigPath,
+    json = {}
+  } = {}) {
     try {
-      await saveJSON(appPath, jsonObj);
+      await saveJSON(path, json);
     } catch (e) {
-      throw(e)
+      throw e;
     }
     return true;
   }
 
-  async appGetConfig(appPath){
-    let appConfig = undefined;
+  async appSaveSettings(jsonObj) {
     try {
-      const isAppConfExsist = await existsFile(appPath);
-      if (!isAppConfExsist) {
-        return appConfig;
-      }
-      appConfig = await loadJSON(APP_CONFIG_PATH);
+      await saveJSON(this.appSettingsPath, jsonObj);
     } catch (e) {
-      throw e
+      throw e;
     }
-    return appConfig;
+    return true;
+  }
+
+  async appGetConfig() {
+    let json = undefined;
+    try {
+      const exsist = await existsFile(this.appGetConfig);
+      if (!exsist) {
+        return json;
+      }
+      json = await loadJSON(this.appGetConfig);
+    } catch (e) {
+      throw e;
+    }
+    return json;
+  }
+
+  async appGetSettings() {
+    let json = undefined;
+    try {
+      const exsist = await existsFile(this.appGetSettings);
+      if (!exsist) {
+        return json;
+      }
+      json = await loadJSON(this.appGetSettings);
+    } catch (e) {
+      throw e;
+    }
+    return json;
   }
 }
 

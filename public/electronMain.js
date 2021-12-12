@@ -9,15 +9,21 @@ const isDev = require("electron-is-dev");
 const appMenu = require("./modules/electronServices/app-menu")
 const { BackendManager } = require("./backendManager");
 const fs = require("fs");
-
-const backendManager = new BackendManager();
+const {saveDialog} = require("./modules/electronServices/utils")
 
 let mainWindow = null;
-let menu = null;
+
 const gotTheLock = app.requestSingleInstanceLock();
 const APP_PATH = app.getPath("appData");
-const APP_CONFIG_PATH = path.join(APP_PATH, "relayjs-data", "config.json");
+const APP_SETTINGS_PATH = path.join(APP_PATH, "relay-app-settings.json");
+const APP_CONFIG_PATH = path.join(APP_PATH, "relay-app-config.json");
 const isMac = process.platform === "darwin";
+
+const backendManager = new BackendManager({
+  appSettingsPath: APP_SETTINGS_PATH,
+  appConfigPath: APP_CONFIG_PATH
+});
+
 
 const showMessageBox = (options) => {
   let __options = {
@@ -168,13 +174,21 @@ ipcMain.handle("usbdetection:getdevices", async (event, data) => {
 ////////////////////////////////////////// handle app config \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 
-ipcMain.handle("app:getconf", async (event, data) => {
+ipcMain.handle("app:getconf", async (event) => {
   return await backendManager.appGetConfig();
 });
 
-ipcMain.handle("app:saveconf", async (event, jsonObj) => {
-  return await backendManager.appSaveConfig();
+ipcMain.handle("app:saveconf", async (event, data) => {
+  return await backendManager.appSaveConfig(data);
 });
+
+ipcMain.handle("app:getsettings", async(event, data) => {
+  return await backendManager.appGetConfig(APP_SETTINGS_PATH);
+})
+
+ipcMain.handle("app:savesettings", async(event, data) => {
+  await backendManager.appSaveConfig(APP_SETTINGS_PATH, data);
+})
 
 ////////////////////////////////////////// handle extras \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -235,8 +249,12 @@ function onClickOpen(){
 function onClickSave(){
   console.log("save!")
 }
-function onClickSaveAs(){
-  console.log("save as!")
+async function onClickSaveAs(){
+  const filePath = saveDialog(mainWindow);
+  console.log("filePath", filePath)
+  if (filePath) {
+    await backendManager.appSaveConfig({path: filePath, json: {}})
+  }
 }
 
 function onChangePort(port){
@@ -258,23 +276,7 @@ ipcMain.handle("utils:open-custom-app-config", async (event, filter) => {
   return "";
 });
 
-ipcMain.handle("utils:saveas-custom-app-config", async (event) => {
-  var options = {
-    title: "Save app config",
-    defaultPath: "config",
-    buttonLabel: "Save",
 
-    filters: [{ name: "json", extensions: ["json"] }],
-  };
-  try {
-    dialog.showSaveDialog(null, options).then(({ filePath }) => {
-      fs.writeFileSync(filePath, "hello world", "utf-8");
-    });
 
-    if (result !== undefined) {
-      return result[0];
-    }
-  } catch (e) {}
 
-  return "";
-});
+
