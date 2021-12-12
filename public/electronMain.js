@@ -1,15 +1,10 @@
-const {
-  app,
-  BrowserWindow,
-  ipcMain,
-  dialog,
-} = require("electron");
+const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
-const appMenu = require("./modules/electronServices/app-menu")
+const appMenu = require("./modules/electronServices/app-menu");
 const { BackendManager } = require("./backendManager");
 const fs = require("fs");
-const {saveDialog} = require("./modules/electronServices/utils")
+const { saveDialog } = require("./modules/electronServices/utils");
 
 let mainWindow = null;
 
@@ -21,9 +16,8 @@ const isMac = process.platform === "darwin";
 
 const backendManager = new BackendManager({
   appSettingsPath: APP_SETTINGS_PATH,
-  appConfigPath: APP_CONFIG_PATH
+  appConfigPath: APP_CONFIG_PATH,
 });
-
 
 const showMessageBox = (options) => {
   let __options = {
@@ -118,12 +112,12 @@ function createWindow() {
 
 backendManager.setRlyManagerEvtCbk(sendRlyManagerMessage);
 
-function sendRlyManagerMessage(message){
+function sendRlyManagerMessage(message) {
   mainWindow.webContents.send("relayjs:message", message);
 }
 
 ipcMain.handle("relayjs:connect", async (event, data) => {
-  return  await backendManager.rlyManagerConnect(data);
+  return await backendManager.rlyManagerConnect(data);
 });
 
 ipcMain.handle("relayjs:disconnect", async (event, data) => {
@@ -139,7 +133,7 @@ ipcMain.handle("relayjs:getstate", (event, data) => {
 });
 
 ipcMain.handle("relayjs:getrelay", (event, relay) => {
-  return backendManager.rlyManagerGetRelay(relay)
+  return backendManager.rlyManagerGetRelay(relay);
 });
 
 ipcMain.handle("relayjs:getrelays", (event, data) => {
@@ -148,22 +142,24 @@ ipcMain.handle("relayjs:getrelays", (event, data) => {
 
 ////////////////////////////////////////// handle Usb detection \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-
 backendManager.setUsbDetectionEvtCbk(sendUsbDetectionMessage);
 
-function sendUsbDetectionMessage(devices){
-  const portItems = devices.map(device => {
+function sendUsbDetectionMessage(devices) {
+  const portItems = devices.map((device) => {
     return {
       label: device.port,
-      click: ()=> onClickMenuItem(["Settings", "Port", device.port])
-    }
-  })
+      click: () => onClickMenuItem(["Settings", "Port", device.port]),
+    };
+  });
   appMenu.updateTemplateItem(mainWindow, ["Settings", "Port"], {
     label: "Port",
     submenu: [
-      {label: "Auto", click: ()=> onClickMenuItem(["Settings", "Port", "Auto"])},
-      ...portItems
-    ]
+      {
+        label: "Auto",
+        click: () => onClickMenuItem(["Settings", "Port", "Auto"]),
+      },
+      ...portItems,
+    ],
   });
 }
 
@@ -173,7 +169,6 @@ ipcMain.handle("usbdetection:getdevices", async (event, data) => {
 
 ////////////////////////////////////////// handle app config \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-
 ipcMain.handle("app:getconf", async (event) => {
   return await backendManager.appGetConfig();
 });
@@ -182,38 +177,45 @@ ipcMain.handle("app:saveconf", async (event, data) => {
   return await backendManager.appSaveConfig(data);
 });
 
-ipcMain.handle("app:getsettings", async(event, data) => {
+ipcMain.handle("app:getsettings", async (event, data) => {
   return await backendManager.appGetConfig(APP_SETTINGS_PATH);
-})
+});
 
-ipcMain.handle("app:savesettings", async(event, data) => {
+ipcMain.handle("app:savesettings", async (event, data) => {
   await backendManager.appSaveConfig(APP_SETTINGS_PATH, data);
-})
+});
 
 ////////////////////////////////////////// handle extras \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 ipcMain.handle("dom:loaded", async (event, jsonObj) => {
-  appMenu.createTemplate(app, mainWindow, onClickMenuItem)
+  appMenu.createTemplate(app, mainWindow, onClickMenuItem);
 
   const devices = await backendManager.usbDetectionGetDevices();
 
-  const portItems = devices.map(device => {
+  const portItems = devices.map((device) => {
     return {
+      type: "radio",
       label: device.port,
-      click: ()=> onClickMenuItem(["Settings", "Port", device.port])
-    }
-  })
+      checked: false,
+      click: () => onClickMenuItem(["Settings", "Port", device.port]),
+    };
+  });
 
   appMenu.updateTemplateItem(mainWindow, ["Settings", "Port"], {
     label: "Port",
     submenu: [
-      {label: "Auto", click: ()=> onClickMenuItem(["Settings", "Port", "Auto"])},
-      ...portItems
-    ]
+      {
+        type: "radio",
+        label: "Auto",
+        checked: true,
+        click: () => onClickMenuItem(["Settings", "Port", "Auto"]),
+      },
+      ...portItems,
+    ],
   });
 });
 
-function onClickMenuItem(tree){
+function onClickMenuItem(tree) {
   switch (tree[0]) {
     case "File":
       switch (tree[1]) {
@@ -242,34 +244,39 @@ function onClickMenuItem(tree){
   }
 }
 
-function onClickOpen(){
-  console.log("open!")
+function onClickOpen() {
+  console.log("open!");
 }
 
-function onClickSave(){
-  console.log("save")
+function onClickSave() {
+  console.log("save");
   mainWindow.webContents.send("menu:file:save");
 }
-async function onClickSaveAs(){
+async function onClickSaveAs() {
   mainWindow.webContents.send("menu:file:saveas");
 }
 
-ipcMain.handle("app:saveconfig", async(event, {showSaveDialog = false, data = {}} = {}) => {
-  let filePath = undefined;
+ipcMain.handle(
+  "app:saveconfig",
+  async (event, { showSaveDialog = false, data = {} } = {}) => {
+    let filePath = undefined;
 
-  if (showSaveDialog) {
-    filePath = saveDialog(mainWindow);
-    if (!filePath) {
-      return true;
+    if (showSaveDialog) {
+      filePath = saveDialog(mainWindow);
+      if (!filePath) {
+        return true;
+      }
     }
+
+    await backendManager.appSaveConfig({ path: filePath, json: data });
+
+    return true;
   }
+);
 
-  await backendManager.appSaveConfig({path: filePath, json: data})
 
-  return true;
-})
 
-function onChangePort(port){
+function onChangePort(port) {
   mainWindow.webContents.send("port:change", port);
 }
 
@@ -287,8 +294,3 @@ ipcMain.handle("utils:open-custom-app-config", async (event, filter) => {
 
   return "";
 });
-
-
-
-
-

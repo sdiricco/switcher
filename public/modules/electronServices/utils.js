@@ -33,4 +33,10 @@ function saveDialog({
   return filePath;
 }
 
+function openDialog({
+  
+}){
+
+}
+
 module.exports = { saveDialog }
