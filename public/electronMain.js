@@ -247,15 +247,27 @@ function onClickOpen(){
 }
 
 function onClickSave(){
-  console.log("save!")
+  console.log("save")
+  mainWindow.webContents.send("menu:file:save");
 }
 async function onClickSaveAs(){
-  const filePath = saveDialog(mainWindow);
-  console.log("filePath", filePath)
-  if (filePath) {
-    await backendManager.appSaveConfig({path: filePath, json: {}})
-  }
+  mainWindow.webContents.send("menu:file:saveas");
 }
+
+ipcMain.handle("app:saveconfig", async(event, {showSaveDialog = false, data = {}} = {}) => {
+  let filePath = undefined;
+
+  if (showSaveDialog) {
+    filePath = saveDialog(mainWindow);
+    if (!filePath) {
+      return true;
+    }
+  }
+
+  await backendManager.appSaveConfig({path: filePath, json: data})
+
+  return true;
+})
 
 function onChangePort(port){
   mainWindow.webContents.send("port:change", port);

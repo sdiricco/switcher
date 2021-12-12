@@ -140,11 +140,14 @@ class BackendManager {
   }
 
   async appSaveConfig({
-    path = this.appConfigPath,
+    path = undefined,
     json = {}
   } = {}) {
     try {
-      await saveJSON(path, json);
+      if (path) {
+        this.appConfigPath = path;
+      }
+      await saveJSON(this.appConfigPath, json);
     } catch (e) {
       throw e;
     }

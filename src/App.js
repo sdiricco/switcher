@@ -2,7 +2,7 @@ import React from "react";
 import AppRender from "./AppRender";
 import { Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
-import "./App.less"
+import "./App.less";
 
 const { ipcRenderer } = window.require("electron");
 const OPEN = 0;
@@ -50,12 +50,17 @@ class App extends React.Component {
   }
 
   async onSaveFile(event, data) {
-    console.log("save");
+    await ipcRenderer.invoke("app:saveconfig", {
+      showSaveDialog: false,
+      data: this.state.labels,
+    });
   }
 
   async onSaveAsFile(event, data) {
-    await ipcRenderer.invoke("utils:saveas-custom-app-config");
-    console.log("save as");
+    await ipcRenderer.invoke("app:saveconfig", {
+      showSaveDialog: true,
+      data: this.state.labels,
+    });
   }
 
   onChangeUsbPort(event, option) {
@@ -140,16 +145,13 @@ class App extends React.Component {
     });
     console.log("connect to portConnected:", this.state.portSelected);
     try {
-      await ipcRenderer.invoke(
-        "relayjs:connect",
-        this.state.portSelected
-      );
+      await ipcRenderer.invoke("relayjs:connect", this.state.portSelected);
     } catch (e) {
-      console.log(e)
+      console.log(e);
       this.setState({
         eMessage: e.message,
         loading: false,
-      })
+      });
       return;
     }
 
@@ -164,14 +166,14 @@ class App extends React.Component {
 
   async componentDidMount() {
     // ipcRenderer.off("menu:file:open", this.onOpenFile);
-    // ipcRenderer.off("menu:file:save", this.onSaveFile);
-    // ipcRenderer.off("menu:file:saveas", this.onSaveAsFile);
+    ipcRenderer.off("menu:file:save", this.onSaveFile);
+    ipcRenderer.off("menu:file:saveas", this.onSaveAsFile);
     ipcRenderer.off("port:change", this.onChangeUsbPort);
     ipcRenderer.off("relayjs:message", this.onRlyUpdate);
 
     // ipcRenderer.on("menu:file:open", this.onOpenFile);
-    // ipcRenderer.on("menu:file:save", this.onSaveFile);
-    // ipcRenderer.on("menu:file:saveas", this.onSaveAsFile);
+    ipcRenderer.on("menu:file:save", this.onSaveFile);
+    ipcRenderer.on("menu:file:saveas", this.onSaveAsFile);
     ipcRenderer.on("port:change", this.onChangeUsbPort);
     ipcRenderer.on("relayjs:message", this.onRlyUpdate);
 
