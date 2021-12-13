@@ -11,6 +11,8 @@ const CLOSE = 1;
 const AUTO = "Auto";
 const MANUAL = "Manual";
 
+
+
 class App extends React.Component {
   constructor(props) {
     super(props);
@@ -30,8 +32,6 @@ class App extends React.Component {
 
     this.onOpenFile = this.onOpenFile.bind(this);
     this.onSaveFile = this.onSaveFile.bind(this);
-    this.onSaveAsFile = this.onSaveAsFile.bind(this);
-
     this.onChangeUsbPort = this.onChangeUsbPort.bind(this);
     this.onChangeLabel = this.onChangeLabel.bind(this);
     this.saveAppConfig = this.saveAppConfig.bind(this);
@@ -42,28 +42,55 @@ class App extends React.Component {
     this.onClickConnect = this.onClickConnect.bind(this);
     this.onClickDisconnect = this.onClickDisconnect.bind(this);
     this.onRlyUpdate = this.onRlyUpdate.bind(this);
+    this.onClickMenuItem = this.onClickMenuItem.bind(this)
   }
 
-  async onOpenFile(event, data) {
-    await ipcRenderer.invoke("utils:open-custom-app-config");
-    console.log("open");
+  onClickMenuItem(event, tree) {
+    switch (tree[0]) {
+      case "File":
+        switch (tree[1]) {
+          case "Open":
+            this.onOpenFile();
+            break;
+          case "Save":
+            this.onSaveFile();
+            break;
+          case "Save as..":
+            this.onSaveFile(true);
+          default:
+            break;
+        }
+        break;
+      case "Settings":
+        switch (tree[1]) {
+          case "Port":
+            this.onChangeUsbPort(tree[2]);
+            break;
+          default:
+            break;
+        }
+      default:
+        break;
+    }
   }
 
-  async onSaveFile(event, data) {
+  async onOpenFile() {
+    const config = await ipcRenderer.invoke("app:openconfig");
+    if (config) {
+      this.setState({
+        labels: config
+      })
+    }
+  }
+
+  async onSaveFile(showSaveDialog = false) {
     await ipcRenderer.invoke("app:saveconfig", {
-      showSaveDialog: false,
+      showSaveDialog: showSaveDialog,
       data: this.state.labels,
     });
   }
 
-  async onSaveAsFile(event, data) {
-    await ipcRenderer.invoke("app:saveconfig", {
-      showSaveDialog: true,
-      data: this.state.labels,
-    });
-  }
-
-  onChangeUsbPort(event, option) {
+  onChangeUsbPort(option) {
     console.log(option);
 
     let portSelected = undefined;
@@ -165,15 +192,11 @@ class App extends React.Component {
   }
 
   async componentDidMount() {
-    // ipcRenderer.off("menu:file:open", this.onOpenFile);
-    ipcRenderer.off("menu:file:save", this.onSaveFile);
-    ipcRenderer.off("menu:file:saveas", this.onSaveAsFile);
+    ipcRenderer.off("menu:action", this.onClickMenuItem);
     ipcRenderer.off("port:change", this.onChangeUsbPort);
     ipcRenderer.off("relayjs:message", this.onRlyUpdate);
 
-    // ipcRenderer.on("menu:file:open", this.onOpenFile);
-    ipcRenderer.on("menu:file:save", this.onSaveFile);
-    ipcRenderer.on("menu:file:saveas", this.onSaveAsFile);
+    ipcRenderer.on("menu:action", this.onClickMenuItem);
     ipcRenderer.on("port:change", this.onChangeUsbPort);
     ipcRenderer.on("relayjs:message", this.onRlyUpdate);
 

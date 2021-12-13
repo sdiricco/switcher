@@ -46,6 +46,7 @@ function createTemplate(app, window, onClickItem) {
           label: "Open",
           click: () => onClickItem(["File", "Open"]),
         },
+        { role: "recentDocuments" },
         { type: "separator" },
         {
           label: "Save",

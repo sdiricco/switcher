@@ -34,9 +34,24 @@ function saveDialog({
 }
 
 function openDialog({
-  
-}){
+  window = null,
+  filters = ["json"],
+  options = undefined,
+} = {}){
+  try {
+    const result = dialog.showOpenDialogSync(window, {
+      properties: ["openFile"],
+      filters: [{name: "json", extensions: filters}]
+    });
 
+    if (result !== undefined) {
+      return result[0];
+    }
+  } catch (e) {
+    console.log(e)
+  }
+
+  return "";
 }
 
-module.exports = { saveDialog }
+module.exports = { saveDialog, openDialog }

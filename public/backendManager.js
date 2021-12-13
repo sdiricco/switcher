@@ -163,14 +163,17 @@ class BackendManager {
     return true;
   }
 
-  async appGetConfig() {
+  async appGetConfig(path) {
     let json = undefined;
     try {
-      const exsist = await existsFile(this.appGetConfig);
+      if (path) {
+        this.appConfigPath = path;
+      }
+      const exsist = await existsFile(this.appConfigPath);
       if (!exsist) {
         return json;
       }
-      json = await loadJSON(this.appGetConfig);
+      json = await loadJSON(this.appConfigPath);
     } catch (e) {
       throw e;
     }

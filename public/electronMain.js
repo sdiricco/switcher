@@ -4,7 +4,8 @@ const isDev = require("electron-is-dev");
 const appMenu = require("./modules/electronServices/app-menu");
 const { BackendManager } = require("./backendManager");
 const fs = require("fs");
-const { saveDialog } = require("./modules/electronServices/utils");
+const { saveDialog, openDialog } = require("./modules/electronServices/utils");
+const { loadJSON } = require("./modules/utils");
 
 let mainWindow = null;
 
@@ -216,44 +217,7 @@ ipcMain.handle("dom:loaded", async (event, jsonObj) => {
 });
 
 function onClickMenuItem(tree) {
-  switch (tree[0]) {
-    case "File":
-      switch (tree[1]) {
-        case "Open":
-          onClickOpen();
-          break;
-        case "Save":
-          onClickSave();
-          break;
-        case "Save as..":
-          onClickSaveAs();
-        default:
-          break;
-      }
-      break;
-    case "Settings":
-      switch (tree[1]) {
-        case "Port":
-          onChangePort(tree[2]);
-          break;
-        default:
-          break;
-      }
-    default:
-      break;
-  }
-}
-
-function onClickOpen() {
-  console.log("open!");
-}
-
-function onClickSave() {
-  console.log("save");
-  mainWindow.webContents.send("menu:file:save");
-}
-async function onClickSaveAs() {
-  mainWindow.webContents.send("menu:file:saveas");
+  mainWindow.webContents.send("menu:action", tree);
 }
 
 ipcMain.handle(
@@ -262,7 +226,7 @@ ipcMain.handle(
     let filePath = undefined;
 
     if (showSaveDialog) {
-      filePath = saveDialog(mainWindow);
+      filePath = saveDialog({window: mainWindow});
       if (!filePath) {
         return true;
       }
@@ -274,23 +238,11 @@ ipcMain.handle(
   }
 );
 
-
-
-function onChangePort(port) {
-  mainWindow.webContents.send("port:change", port);
-}
-
-ipcMain.handle("utils:open-custom-app-config", async (event, filter) => {
-  try {
-    const result = dialog.showOpenDialogSync(mainWindow, {
-      properties: ["openFile"],
-      // filters: filter,
-    });
-
-    if (result !== undefined) {
-      return result[0];
-    }
-  } catch (e) {}
-
-  return "";
+ipcMain.handle("app:openconfig", async (event, filter) => {
+  let config = {}
+  const filePath = openDialog({ window: mainWindow });
+  if (filePath) {
+    config = await backendManager.appGetConfig(filePath)
+  }
+  return config
 });
