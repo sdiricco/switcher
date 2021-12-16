@@ -1,113 +1,32 @@
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
-const isDev = require("electron-is-dev");
 const appMenu = require("./modules/electronServices/app-menu");
 const { BackendManager } = require("./backendManager");
-const fs = require("fs");
 const { saveDialog, openDialog } = require("./modules/electronServices/utils");
-const { loadJSON } = require("./modules/utils");
+require("./modules/electronServices/context-menu");
+const { appInit } = require("./modules/electronServices/app-init");
 
-let mainWindow = null;
 
-const gotTheLock = app.requestSingleInstanceLock();
 const APP_PATH = app.getPath("appData");
 const APP_SETTINGS_PATH = path.join(APP_PATH, "relay-app-settings.json");
 const APP_CONFIG_PATH = path.join(APP_PATH, "relay-app-config.json");
-const isMac = process.platform === "darwin";
 
 const backendManager = new BackendManager({
   appSettingsPath: APP_SETTINGS_PATH,
   appConfigPath: APP_CONFIG_PATH,
 });
 
-const showMessageBox = (options) => {
-  let __options = {
-    buttons: options.buttons || ["ok"],
-    message: options.message || "?",
-    title: options.title || "Info",
-    type: options.type || "question",
-  };
-  return dialog.showMessageBoxSync(mainWindow, __options);
-};
+let mainWindow = null;
 
-ipcMain.handle("message-box", async (event, options) => {
-  showMessageBox(options);
+appInit().then((window) => {
+  mainWindow = window
 });
 
-if (!gotTheLock) {
-  app.quit();
-} else {
-  app.on("second-instance", (event, commandLine, workingDirectory) => {
-    // Someone tried to run a second instance, we should focus our window.
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) myWindow.restore();
-      mainWindow.focus();
-    }
-  });
+////////////////////////////////////////// dialog \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-  // Create myWindow, load the rest of the app, etc...
-  app.on("ready", createWindow);
-
-  // Quit when all windows are closed.
-  app.on("window-all-closed", function () {
-    // On OS X it is common for applications and their menu bar
-    // to stay active until the user quits explicitly with Cmd + Q
-    if (process.platform !== "darwin") {
-      app.quit();
-    }
-  });
-
-  app.on("activate", function () {
-    // On OS X it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
-}
-
-function createWindow() {
-  mainWindow = new BrowserWindow({
-    autoHideMenuBar: false,
-    minWidth: 400,
-    minHeight: 200,
-    show: true,
-    title: "Relay App",
-    webPreferences: {
-      backgroundThrottling: false,
-      nodeIntegration: true,
-      enableRemoteModule: true,
-      contextIsolation: false,
-    },
-  });
-  const startURL = isDev
-    ? "http://localhost:3000"
-    : `file://${path.join(__dirname, "../build/index.html")}`;
-
-  mainWindow.loadURL(startURL);
-
-  mainWindow.removeMenu();
-
-  mainWindow.once("ready-to-show", () => {
-    mainWindow.show();
-    if (isDev) {
-      mainWindow.toggleDevTools();
-    }
-  });
-  mainWindow.on("closed", () => {
-    mainWindow = null;
-  });
-
-  if (isDev) {
-    const {
-      default: installExtension,
-      REACT_DEVELOPER_TOOLS,
-    } = require("electron-devtools-installer");
-    installExtension(REACT_DEVELOPER_TOOLS)
-      .then((name) => console.log(`Added Extension: react developer`))
-      .catch((err) =>
-        console.log("An error occurred during add react extension ")
-      );
-  }
-}
+ipcMain.handle("message-box", async (event, options) => {
+  return dialog.showMessageBoxSync(mainWindow, options);
+});
 
 ////////////////////////////////////////// handle Relay Manager \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
@@ -224,25 +143,22 @@ ipcMain.handle(
   "app:saveconfig",
   async (event, { showSaveDialog = false, data = {} } = {}) => {
     let filePath = undefined;
-
     if (showSaveDialog) {
-      filePath = saveDialog({window: mainWindow});
+      filePath = saveDialog({ window: mainWindow });
       if (!filePath) {
         return true;
       }
     }
-
     await backendManager.appSaveConfig({ path: filePath, json: data });
-
     return true;
   }
 );
 
 ipcMain.handle("app:openconfig", async (event, filter) => {
-  let config = {}
+  let config = {};
   const filePath = openDialog({ window: mainWindow });
   if (filePath) {
-    config = await backendManager.appGetConfig(filePath)
+    config = await backendManager.appGetConfig(filePath);
   }
-  return config
+  return config;
 });
