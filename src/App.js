@@ -5,12 +5,8 @@ import { LoadingOutlined } from "@ant-design/icons";
 import "./App.less";
 
 const { ipcRenderer } = window.require("electron");
-const OPEN = 0;
-const CLOSE = 1;
 
 const AUTO = "Auto";
-const MANUAL = "Manual";
-
 
 
 class App extends React.Component {
@@ -42,7 +38,12 @@ class App extends React.Component {
     this.onClickConnect = this.onClickConnect.bind(this);
     this.onClickDisconnect = this.onClickDisconnect.bind(this);
     this.onRlyUpdate = this.onRlyUpdate.bind(this);
-    this.onClickMenuItem = this.onClickMenuItem.bind(this)
+    this.onClickMenuItem = this.onClickMenuItem.bind(this);
+    this.onUsbDetectionUpdate = this.onUsbDetectionUpdate.bind(this);
+  }
+
+  async onUsbDetectionUpdate(event, devices){
+    await ipcRenderer.invoke("menu:port:update", devices)
   }
 
   onClickMenuItem(event, tree) {
@@ -125,13 +126,26 @@ class App extends React.Component {
     const appConfig = {
       labels: this.state.labels,
     };
-    const res = await ipcRenderer.invoke("app:saveconf", appConfig);
+    try {
+      await ipcRenderer.invoke("app:saveconfig", {
+        showSaveDialog: false,
+        data: appConfig,
+      });
+    } catch (e) {
+      console.log(e)
+    } 
   }
 
   async getAppConfig() {
-    const res = await ipcRenderer.invoke("app:getconf");
+    const labels = [];
+    try {
+      const res = await ipcRenderer.invoke("app:getconf");
+      labels = res.data.labels;
+    } catch (e) {
+      console.log(e)
+    }
     this.setState({
-      labels: res.data.labels,
+      labels: labels
     });
   }
 
@@ -145,11 +159,19 @@ class App extends React.Component {
   }
 
   async onClickConnect() {
-    const res = await this.connect();
+    try {
+      await this.connect();
+    } catch (e) {
+      console.log(e)
+    }
   }
 
   async onClickDisconnect() {
-    const res = await this.disconnect();
+    try {
+      await this.disconnect();
+    } catch (e) {
+      console.log(e)
+    }
   }
 
   async onClickSwitch(el, idx) {
@@ -160,10 +182,23 @@ class App extends React.Component {
       isbusy: true,
     });
     const isOpen = Boolean(el.state);
-    const res = await ipcRenderer.invoke("relayjs:write", idx, Number(!isOpen));
+    try {
+      await ipcRenderer.invoke("relayjs:write", idx, Number(!isOpen));
+    } catch (e) {
+      console.log(e)
+    }
     this.setState({
       isbusy: false,
     });
+  }
+
+  async onClickSetRlyCount(rlyCount){
+    console.log("set", rlyCount)
+    try {
+      await ipcRenderer.invoke("relayjs:setcount", rlyCount)
+    } catch (e) {
+      console.log(e)
+    }
   }
 
   async connect() {
@@ -188,20 +223,26 @@ class App extends React.Component {
   }
 
   async disconnect() {
-    const res = await ipcRenderer.invoke("relayjs:disconnect");
+    try {
+      await ipcRenderer.invoke("relayjs:disconnect");
+    } catch (e) {
+      console.log(e) 
+    }
   }
 
   async componentDidMount() {
+
+    ipcRenderer.off("usbdetection:update", this.onUsbDetectionUpdate);
     ipcRenderer.off("menu:action", this.onClickMenuItem);
     ipcRenderer.off("port:change", this.onChangeUsbPort);
     ipcRenderer.off("relayjs:message", this.onRlyUpdate);
 
+    ipcRenderer.on("usbdetection:update", this.onUsbDetectionUpdate);
     ipcRenderer.on("menu:action", this.onClickMenuItem);
     ipcRenderer.on("port:change", this.onChangeUsbPort);
     ipcRenderer.on("relayjs:message", this.onRlyUpdate);
 
     await ipcRenderer.invoke("dom:loaded");
-    // await this.getAppConfig();
     await this.connect();
   }
 
@@ -222,6 +263,7 @@ class App extends React.Component {
       >
         <AppRender
           onClickSwitch={this.onClickSwitch}
+          onClickSetRlyCount={this.onClickSetRlyCount}
           onClickConnect={this.onClickConnect}
           onClickDisconnect={this.onClickDisconnect}
           onChangeLabel={this.onChangeLabel}

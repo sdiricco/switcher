@@ -5,9 +5,7 @@ const {
   loadJSON,
   saveJSON,
   getUsbDevices,
-  getAppConfig,
-  saveAppConfig,
-} = require("./modules/utils");
+} = require("./utils");
 
 class BackendManager {
   constructor({ appSettingsPath = undefined, appConfigPath = undefined } = {}) {
@@ -134,6 +132,10 @@ class BackendManager {
   rlyManagerGetRelays() {
     return relayjs.relays;
   }
+  
+  rlyManagerSetCount(rlyCount){
+    
+  }
 
   async usbDetectionGetDevices() {
     return await getUsbDevices();
@@ -193,6 +195,7 @@ class BackendManager {
     }
     return json;
   }
+
 }
 
 module.exports = {

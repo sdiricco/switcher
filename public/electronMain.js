@@ -1,20 +1,14 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
+const { app, ipcMain, dialog } = require("electron");
 const appMenu = require("./modules/electronServices/app-menu");
-const { BackendManager } = require("./backendManager");
-const { saveDialog, openDialog } = require("./modules/electronServices/utils");
-require("./modules/electronServices/context-menu");
+const { BackendManager } = require("./modules/backendManager");
 const { appInit } = require("./modules/electronServices/app-init");
 
+require("./modules/electronServices/app-context-menu");
 
 const APP_PATH = app.getPath("appData");
 const APP_SETTINGS_PATH = path.join(APP_PATH, "relay-app-settings.json");
 const APP_CONFIG_PATH = path.join(APP_PATH, "relay-app-config.json");
-
-const backendManager = new BackendManager({
-  appSettingsPath: APP_SETTINGS_PATH,
-  appConfigPath: APP_CONFIG_PATH,
-});
 
 let mainWindow = null;
 
@@ -22,10 +16,26 @@ appInit().then((window) => {
   mainWindow = window
 });
 
+const backendManager = new BackendManager({
+  appSettingsPath: APP_SETTINGS_PATH,
+  appConfigPath: APP_CONFIG_PATH,
+});
+
 ////////////////////////////////////////// dialog \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 ipcMain.handle("message-box", async (event, options) => {
   return dialog.showMessageBoxSync(mainWindow, options);
+});
+
+
+////////////////////////////////////////// dom loaded \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+ipcMain.handle("dom:loaded", async (event, jsonObj) => {
+  appMenu.createTemplate(app, mainWindow, onClickMenuItem);
+
+  const devices = await backendManager.usbDetectionGetDevices();
+  updateMenuPortItems(devices);
+
 });
 
 ////////////////////////////////////////// handle Relay Manager \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
@@ -60,58 +70,71 @@ ipcMain.handle("relayjs:getrelays", (event, data) => {
   return backendManager.rlyManagerGetRelays();
 });
 
+ipcMain.handle("relayjs:setcount", (event, rlyCount) => {
+  return backendManager.rlyManagerSetCount(rlyCount);
+});
+
 ////////////////////////////////////////// handle Usb detection \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 backendManager.setUsbDetectionEvtCbk(sendUsbDetectionMessage);
 
 function sendUsbDetectionMessage(devices) {
-  const portItems = devices.map((device) => {
-    return {
-      label: device.port,
-      click: () => onClickMenuItem(["Settings", "Port", device.port]),
-    };
-  });
-  appMenu.updateTemplateItem(mainWindow, ["Settings", "Port"], {
-    label: "Port",
-    submenu: [
-      {
-        label: "Auto",
-        click: () => onClickMenuItem(["Settings", "Port", "Auto"]),
-      },
-      ...portItems,
-    ],
-  });
+  mainWindow.webContents.send("usbdetection:update", devices);
 }
 
 ipcMain.handle("usbdetection:getdevices", async (event, data) => {
   return await backendManager.usbDetectionGetDevices();
 });
 
-////////////////////////////////////////// handle app config \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-ipcMain.handle("app:getconf", async (event) => {
-  return await backendManager.appGetConfig();
+////////////////////////////////////////// handle app menu \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+function onClickMenuItem(tree) {
+  mainWindow.webContents.send("menu:action", tree);
+}
+
+ipcMain.handle(
+  "app:saveconfig",
+  async (event, { showSaveDialog = false, data = {} } = {}) => {
+    let filePath = undefined;
+    if (showSaveDialog) {
+      filePath = dialog.showSaveDialogSync(mainWindow, {
+        title: "Save",
+        buttonLabel: "Save",
+        defaultPath: ".json",
+        filters: [{name: "json", extensions: filters}]
+      });
+      if (!filePath) {
+        return true;
+      }
+    }
+    await backendManager.appSaveConfig({ path: filePath, json: data });
+    return true;
+  }
+);
+
+ipcMain.handle("app:openconfig", async (event, filter) => {
+  let config = {};
+  const listOfFilePath = dialog.showOpenDialogSync(mainWindow, {
+    properties: ["openFile"],
+    filters: [{name: "json", extensions: ["json"]}]
+  });
+  const filePath = listOfFilePath[0];
+  if (filePath) {
+    config = await backendManager.appGetConfig(filePath);
+  }
+  return config;
 });
 
-ipcMain.handle("app:saveconf", async (event, data) => {
-  return await backendManager.appSaveConfig(data);
-});
+ipcMain.handle("menu:port:update", async (event, devices) =>{
+  updateMenuPortItems(devices);
+})
 
-ipcMain.handle("app:getsettings", async (event, data) => {
-  return await backendManager.appGetConfig(APP_SETTINGS_PATH);
-});
 
-ipcMain.handle("app:savesettings", async (event, data) => {
-  await backendManager.appSaveConfig(APP_SETTINGS_PATH, data);
-});
+////////////////////////////////////////// aux functions \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-////////////////////////////////////////// handle extras \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-
-ipcMain.handle("dom:loaded", async (event, jsonObj) => {
-  appMenu.createTemplate(app, mainWindow, onClickMenuItem);
-
-  const devices = await backendManager.usbDetectionGetDevices();
-
+function updateMenuPortItems(devices){
+  console.log(devices)
   const portItems = devices.map((device) => {
     return {
       type: "radio",
@@ -133,32 +156,4 @@ ipcMain.handle("dom:loaded", async (event, jsonObj) => {
       ...portItems,
     ],
   });
-});
-
-function onClickMenuItem(tree) {
-  mainWindow.webContents.send("menu:action", tree);
 }
-
-ipcMain.handle(
-  "app:saveconfig",
-  async (event, { showSaveDialog = false, data = {} } = {}) => {
-    let filePath = undefined;
-    if (showSaveDialog) {
-      filePath = saveDialog({ window: mainWindow });
-      if (!filePath) {
-        return true;
-      }
-    }
-    await backendManager.appSaveConfig({ path: filePath, json: data });
-    return true;
-  }
-);
-
-ipcMain.handle("app:openconfig", async (event, filter) => {
-  let config = {};
-  const filePath = openDialog({ window: mainWindow });
-  if (filePath) {
-    config = await backendManager.appGetConfig(filePath);
-  }
-  return config;
-});
