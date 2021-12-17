@@ -38,8 +38,6 @@ function createTemplate(app, window, onClickItem) {
       : []),
     // { role: 'fileMenu' }
     {
-      _id: 1,
-      _parentId: null,
       label: "File",
       submenu: [
         {
@@ -63,8 +61,6 @@ function createTemplate(app, window, onClickItem) {
     },
     // { role: 'editMenu' }
     {
-      _id: 2,
-      _parentId: null,
       label: "Edit",
       submenu: [
         { role: "undo" },
@@ -87,31 +83,20 @@ function createTemplate(app, window, onClickItem) {
           : [{ role: "delete" }, { type: "separator" }, { role: "selectAll" }]),
       ],
     },
-    // { role: 'viewMenu' }
+    // { role: 'windowMenu' }
     {
-      _id: 3,
-      _parentId: null,
-      label: "View",
+      label: "Window",
       submenu: [
         { role: "reload" },
         { role: "forceReload" },
         { role: "toggleDevTools" },
         { type: "separator" },
+        { role: "togglefullscreen" },
+        { role: "minimize" },
+        { type: "separator" },
         { role: "resetZoom" },
         { role: "zoomIn" },
         { role: "zoomOut" },
-        { type: "separator" },
-        { role: "togglefullscreen" },
-      ],
-    },
-    // { role: 'windowMenu' }
-    {
-      _id: 4,
-      _parentId: null,
-      label: "Window",
-      submenu: [
-        { role: "minimize" },
-        { role: "zoom" },
         ...(isMac
           ? [
               { type: "separator" },
@@ -119,12 +104,10 @@ function createTemplate(app, window, onClickItem) {
               { type: "separator" },
               { role: "window" },
             ]
-          : [{ role: "close" }]),
+          : [{ type: "separator" }, { role: "close" }]),
       ],
     },
     {
-      _id: 5,
-      _parentId: null,
       label: "Settings",
       submenu: [
         {
@@ -144,8 +127,6 @@ function createTemplate(app, window, onClickItem) {
       ],
     },
     {
-      _id: 6,
-      _parentId: null,
       role: "help",
       submenu: [
         {
