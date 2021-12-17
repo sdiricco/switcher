@@ -1,9 +1,6 @@
 import React from "react";
 import { Row, Col } from "antd";
-import {
-  ExclamationCircleFilled,
-  CheckCircleFilled,
-} from "@ant-design/icons";
+import { ExclamationCircleFilled, CheckCircleFilled } from "@ant-design/icons";
 
 class AppFooter extends React.Component {
   constructor(props) {
@@ -30,6 +27,9 @@ class AppFooter extends React.Component {
             <Col className="gutter-row">Disconnected</Col>
           </React.Fragment>
         )}
+        <Col flex="auto" style={{ textAlign: "right" }}>
+          {this.props.path}
+        </Col>
       </Row>
     );
   }

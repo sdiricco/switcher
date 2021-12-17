@@ -27,7 +27,6 @@ ipcMain.handle("message-box", async (event, options) => {
   return dialog.showMessageBoxSync(mainWindow, options);
 });
 
-
 ////////////////////////////////////////// dom loaded \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 ipcMain.handle("dom:loaded", async (event, jsonObj) => {
@@ -88,11 +87,17 @@ ipcMain.handle("usbdetection:getdevices", async (event, data) => {
 });
 
 
-////////////////////////////////////////// handle app menu \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+////////////////////////////////////////// handle menu \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 function onClickMenuItem(tree) {
   mainWindow.webContents.send("menu:action", tree);
 }
+
+////////////////////////////////////////// handle app \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+
+ipcMain.handle("app:settitle", async (event, title) => {
+  mainWindow.setTitle(title)
+});
 
 ipcMain.handle(
   "app:saveconfig",
@@ -124,7 +129,10 @@ ipcMain.handle("app:openconfig", async (event, filter) => {
   if (filePath) {
     config = await backendManager.appGetConfig(filePath);
   }
-  return config;
+  return {
+    config: config,
+    path: filePath
+  };
 });
 
 ipcMain.handle("menu:port:update", async (event, devices) =>{

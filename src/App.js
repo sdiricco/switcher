@@ -14,6 +14,8 @@ class App extends React.Component {
     super(props);
     this.props = props;
     this.state = {
+      title: "Untiled",
+      path: "",
       connected: false,
       portConnected: undefined,
       portSelected: undefined,
@@ -79,12 +81,32 @@ class App extends React.Component {
   }
 
   async onOpenFile() {
-    const config = await ipcRenderer.invoke("app:openconfig");
-    if (config) {
-      this.setState({
-        labels: config
-      })
+    let labels = this.state.labels;
+    let path = this.state.path;
+    let title = this.state.title;
+
+    try {
+      const data = await ipcRenderer.invoke("app:openconfig");
+
+      if (data) {
+        if (data.config) {
+          labels = data.config
+        }
+        if(data.path){
+          path = data.path
+        }
+      }
+
+      await ipcRenderer.invoke("app:settitle", path);
+    } catch (e) {
+      console.log(e)
     }
+
+    this.setState({
+      labels:labels,
+      path:path,
+      title:title
+    })
   }
 
   async onSaveFile(showSaveDialog = false) {
