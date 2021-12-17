@@ -46,8 +46,12 @@ function sendRlyManagerMessage(message) {
   mainWindow.webContents.send("relayjs:message", message);
 }
 
-ipcMain.handle("relayjs:connect", async (event, data) => {
-  return await backendManager.rlyManagerConnect(data);
+ipcMain.handle("relayjs:connect", async (event, {port = undefined, size = undefined, options = undefined} = {}) => {
+  return await backendManager.rlyManagerConnect({
+    port: port,
+    size: size,
+    options: options,
+  });
 });
 
 ipcMain.handle("relayjs:disconnect", async (event, data) => {
@@ -70,9 +74,6 @@ ipcMain.handle("relayjs:getrelays", (event, data) => {
   return backendManager.rlyManagerGetRelays();
 });
 
-ipcMain.handle("relayjs:setcount", (event, rlyCount) => {
-  return backendManager.rlyManagerSetCount(rlyCount);
-});
 
 ////////////////////////////////////////// handle Usb detection \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 

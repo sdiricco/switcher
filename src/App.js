@@ -22,6 +22,8 @@ class App extends React.Component {
       relays: [],
       isbusy: false,
       labels: [],
+      rlyCount: undefined,
+      rlyCountSelected: undefined,
     };
 
     this.timeoutId = undefined;
@@ -35,6 +37,7 @@ class App extends React.Component {
     this.connect = this.connect.bind(this);
     this.disconnect = this.disconnect.bind(this);
     this.onClickSwitch = this.onClickSwitch.bind(this);
+    this.onClickReconnect = this.onClickReconnect.bind(this);
     this.onClickConnect = this.onClickConnect.bind(this);
     this.onClickDisconnect = this.onClickDisconnect.bind(this);
     this.onRlyUpdate = this.onRlyUpdate.bind(this);
@@ -150,10 +153,12 @@ class App extends React.Component {
   }
 
   onRlyUpdate(event, rlyState) {
+    const rlyCount = rlyState.relays.length ? rlyState.relays.length : undefined;
     this.setState({
       connected: rlyState.connected,
       portConnected: rlyState.port,
       relays: rlyState.relays,
+      rlyCount: rlyCount,
       eMessage: rlyState.errorMessage,
     });
   }
@@ -192,22 +197,28 @@ class App extends React.Component {
     });
   }
 
-  async onClickSetRlyCount(rlyCount){
-    console.log("set", rlyCount)
-    try {
-      await ipcRenderer.invoke("relayjs:setcount", rlyCount)
-    } catch (e) {
-      console.log(e)
-    }
+  async onClickReconnect(rlyCount){
+    await this.connect({size: rlyCount})
   }
 
-  async connect() {
+  async connect({port = undefined, size = undefined} = {}) {
+
     this.setState({
       loading: true,
     });
-    console.log("connect to portConnected:", this.state.portSelected);
+
+    let __port = this.state.portSelected;
+    let __size = this.state.rlyCountSelected;
+
+    if (port) {
+      __port = port;
+    }
+    if (size) {
+      __size = size;
+    }
+
     try {
-      await ipcRenderer.invoke("relayjs:connect", this.state.portSelected);
+      await ipcRenderer.invoke("relayjs:connect", {port: __port, size: __size});
     } catch (e) {
       console.log(e);
       this.setState({
@@ -219,7 +230,9 @@ class App extends React.Component {
 
     this.setState({
       loading: false,
+      rlyCountSelected: __size
     });
+
   }
 
   async disconnect() {
@@ -263,7 +276,7 @@ class App extends React.Component {
       >
         <AppRender
           onClickSwitch={this.onClickSwitch}
-          onClickSetRlyCount={this.onClickSetRlyCount}
+          onClickReconnect={this.onClickReconnect}
           onClickConnect={this.onClickConnect}
           onClickDisconnect={this.onClickDisconnect}
           onChangeLabel={this.onChangeLabel}

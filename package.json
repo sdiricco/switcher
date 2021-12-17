@@ -6,7 +6,7 @@
     "@ant-design/icons": "^4.7.0",
     "@craco/craco": "^5.9.0",
     "@electron/remote": "^1.0.2",
-    "@sdiricco/relayjs": "^0.0.7",
+    "@sdiricco/relayjs": "^0.0.9",
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",

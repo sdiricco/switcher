@@ -1,21 +1,14 @@
 const { RelayJs } = require("@sdiricco/relayjs");
 const usbDetect = require("usb-detection");
-const {
-  existsFile,
-  loadJSON,
-  saveJSON,
-  getUsbDevices,
-} = require("./utils");
+const { existsFile, loadJSON, saveJSON, getUsbDevices } = require("./utils");
 
 class BackendManager {
   constructor({ appSettingsPath = undefined, appConfigPath = undefined } = {}) {
-
     this.appSettingsPath = appSettingsPath;
     this.appConfigPath = appConfigPath;
 
-    this.relayjs = new RelayJs({
-      inverseOut: true,
-    });
+    this.relayjs = new RelayJs();
+
     usbDetect.startMonitoring();
 
     this.rlyManagerEvtCbk = undefined;
@@ -80,10 +73,18 @@ class BackendManager {
     }
   }
 
-  async rlyManagerConnect(data) {
+  async rlyManagerConnect({
+    port = undefined,
+    size = undefined,
+    options = undefined,
+  } = {}) {
     let result = false;
     try {
-      result = await this.relayjs.connect(data);
+      result = await this.relayjs.connect({
+        port: port,
+        size: size,
+        options: options
+      });
       this.__sendRlyManagerMessageToCbk();
     } catch (e) {
       throw e;
@@ -132,19 +133,14 @@ class BackendManager {
   rlyManagerGetRelays() {
     return relayjs.relays;
   }
-  
-  rlyManagerSetCount(rlyCount){
-    
-  }
+
+  rlyManagerSetCount(rlyCount) {}
 
   async usbDetectionGetDevices() {
     return await getUsbDevices();
   }
 
-  async appSaveConfig({
-    path = undefined,
-    json = {}
-  } = {}) {
+  async appSaveConfig({ path = undefined, json = {} } = {}) {
     try {
       if (path) {
         this.appConfigPath = path;
@@ -195,7 +191,6 @@ class BackendManager {
     }
     return json;
   }
-
 }
 
 module.exports = {
