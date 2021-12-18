@@ -3,6 +3,8 @@ import AppRender from "./AppRender";
 import { Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import "./App.less";
+import electron from "./ElectronServices"; 
+
 
 const { ipcRenderer } = window.require("electron");
 const path = window.require("path");
@@ -31,7 +33,7 @@ class App extends React.Component {
     this.timeoutId = undefined;
 
     this.openConfig = this.openConfig.bind(this);
-    this.onSaveFile = this.onSaveFile.bind(this);
+    this.saveConfig = this.saveConfig.bind(this);
     this.onChangeUsbPort = this.onChangeUsbPort.bind(this);
     this.onChangeLabel = this.onChangeLabel.bind(this);
     this.saveAppConfig = this.saveAppConfig.bind(this);
@@ -72,10 +74,10 @@ class App extends React.Component {
             this.openConfig({ openFromExplorer: true });
             break;
           case "Save":
-            this.onSaveFile();
+            this.saveConfig();
             break;
           case "Save as..":
-            this.onSaveFile(true);
+            this.saveConfig({showSaveDialog: true});
             break;
           default:
             break;
@@ -101,9 +103,7 @@ class App extends React.Component {
     let __title = this.state.title;
 
     try {
-      const data = await ipcRenderer.invoke("app:openconfig", {
-        openFromExplorer: openFromExplorer,
-      });
+      const data = await electron.appOpenConfig({openFromExplorer: openFromExplorer})
 
       if (data) {
         if (data.config && data.config.labels) {
@@ -115,7 +115,8 @@ class App extends React.Component {
         }
       }
 
-      await ipcRenderer.invoke("app:settitle", __title);
+      await electron.appSetTitle(__title);
+
     } catch (e) {
       console.log(e);
     }
@@ -127,7 +128,7 @@ class App extends React.Component {
     });
   }
 
-  async onSaveFile(showSaveDialog = false) {
+  async saveConfig({showSaveDialog = false} = {}) {
     const config = {
       labels: this.state.labels,
     };
