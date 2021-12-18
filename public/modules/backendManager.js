@@ -134,8 +134,6 @@ class BackendManager {
     return relayjs.relays;
   }
 
-  rlyManagerSetCount(rlyCount) {}
-
   async usbDetectionGetDevices() {
     return await getUsbDevices();
   }
@@ -146,15 +144,21 @@ class BackendManager {
         this.appConfigPath = path;
       }
       await saveJSON(this.appConfigPath, json);
+      await this.appSaveSettings({
+        configPath: this.appConfigPath
+      })
     } catch (e) {
       throw e;
     }
     return true;
   }
 
-  async appSaveSettings(jsonObj) {
+  async appSaveSettings({appConfigPath = undefined} = {}) {
     try {
-      await saveJSON(this.appSettingsPath, jsonObj);
+      const json = {
+        appConfigPath: appConfigPath
+      }
+      await saveJSON(this.appSettingsPath, json);
     } catch (e) {
       throw e;
     }
@@ -162,34 +166,58 @@ class BackendManager {
   }
 
   async appGetConfig(path) {
-    let json = undefined;
+
+    let result = {
+      config: undefined,
+      path: undefined
+    }
+
     try {
+
       if (path) {
         this.appConfigPath = path;
+      }else{
+        const settings = await this.appGetSettings();
+        this.appConfigPath = settings.configPath
       }
-      const exsist = await existsFile(this.appConfigPath);
-      if (!exsist) {
-        return json;
+
+      try {
+        result.config = await loadJSON(this.appConfigPath);
+      } catch (e) {
+        //if not exsists 
+        return result;
       }
-      json = await loadJSON(this.appConfigPath);
+
+      await this.appSaveSettings({
+        configPath: this.appConfigPath
+      })
+
+      result.path = this.appConfigPath;
+
     } catch (e) {
       throw e;
     }
-    return json;
+
+    return result;
   }
 
   async appGetSettings() {
-    let json = undefined;
+
+    let result = undefined;
+
     try {
-      const exsist = await existsFile(this.appGetSettings);
+      const exsist = await existsFile(this.appSettingsPath);
+
       if (!exsist) {
         return json;
       }
-      json = await loadJSON(this.appGetSettings);
+
+      result = await loadJSON(this.appSettingsPath);
+
     } catch (e) {
       throw e;
     }
-    return json;
+    return result;
   }
 }
 

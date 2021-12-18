@@ -5,9 +5,9 @@ import { LoadingOutlined } from "@ant-design/icons";
 import "./App.less";
 
 const { ipcRenderer } = window.require("electron");
+const path = window.require("path");
 
 const AUTO = "Auto";
-
 
 class App extends React.Component {
   constructor(props) {
@@ -30,12 +30,11 @@ class App extends React.Component {
 
     this.timeoutId = undefined;
 
-    this.onOpenFile = this.onOpenFile.bind(this);
+    this.openConfig = this.openConfig.bind(this);
     this.onSaveFile = this.onSaveFile.bind(this);
     this.onChangeUsbPort = this.onChangeUsbPort.bind(this);
     this.onChangeLabel = this.onChangeLabel.bind(this);
     this.saveAppConfig = this.saveAppConfig.bind(this);
-    this.getAppConfig = this.getAppConfig.bind(this);
     this.connect = this.connect.bind(this);
     this.disconnect = this.disconnect.bind(this);
     this.onClickSwitch = this.onClickSwitch.bind(this);
@@ -45,10 +44,24 @@ class App extends React.Component {
     this.onRlyUpdate = this.onRlyUpdate.bind(this);
     this.onClickMenuItem = this.onClickMenuItem.bind(this);
     this.onUsbDetectionUpdate = this.onUsbDetectionUpdate.bind(this);
+    this.autosave = this.autosave.bind(this);
   }
 
-  async onUsbDetectionUpdate(event, devices){
-    await ipcRenderer.invoke("menu:port:update", devices)
+  async autosave({ enable = false, time = 1000 } = {}) {
+    if (!enable) {
+      return;
+    }
+
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+    }
+    this.timeoutId = setTimeout(async () => {
+      await this.saveAppConfig();
+    }, time);
+  }
+
+  async onUsbDetectionUpdate(event, devices) {
+    await ipcRenderer.invoke("menu:port:update", devices);
   }
 
   onClickMenuItem(event, tree) {
@@ -56,13 +69,14 @@ class App extends React.Component {
       case "File":
         switch (tree[1]) {
           case "Open":
-            this.onOpenFile();
+            this.openConfig({ openFromExplorer: true });
             break;
           case "Save":
             this.onSaveFile();
             break;
           case "Save as..":
             this.onSaveFile(true);
+            break;
           default:
             break;
         }
@@ -75,44 +89,52 @@ class App extends React.Component {
           default:
             break;
         }
+        break;
       default:
         break;
     }
   }
 
-  async onOpenFile() {
-    let labels = this.state.labels;
-    let path = this.state.path;
-    let title = this.state.title;
+  async openConfig({ openFromExplorer = false } = {}) {
+    let __labels = this.state.labels;
+    let __path = this.state.path;
+    let __title = this.state.title;
 
     try {
-      const data = await ipcRenderer.invoke("app:openconfig");
+      const data = await ipcRenderer.invoke("app:openconfig", {
+        openFromExplorer: openFromExplorer,
+      });
 
       if (data) {
-        if (data.config) {
-          labels = data.config
+        if (data.config && data.config.labels) {
+          __labels = data.config.labels;
         }
-        if(data.path){
-          path = data.path
+        if (data.path) {
+          __path = data.path;
+          __title = path.parse(data.path).base;
         }
       }
 
-      await ipcRenderer.invoke("app:settitle", path);
+      await ipcRenderer.invoke("app:settitle", __title);
     } catch (e) {
-      console.log(e)
+      console.log(e);
     }
 
     this.setState({
-      labels:labels,
-      path:path,
-      title:title
-    })
+      labels: __labels,
+      path: __path,
+      title: __title,
+    });
   }
 
   async onSaveFile(showSaveDialog = false) {
+    const config = {
+      labels: this.state.labels,
+    };
+
     await ipcRenderer.invoke("app:saveconfig", {
       showSaveDialog: showSaveDialog,
-      data: this.state.labels,
+      data: config,
     });
   }
 
@@ -136,15 +158,11 @@ class App extends React.Component {
     }
     labels[idx] = e.target.value;
 
-    if (this.timeoutId) {
-      clearTimeout(this.timeoutId);
-    }
-    this.timeoutId = setTimeout(async () => {
-      await this.saveAppConfig();
-    }, 1000);
     this.setState({
       labels: labels,
     });
+
+    this.autosave({ enable: false });
   }
 
   async saveAppConfig() {
@@ -157,25 +175,14 @@ class App extends React.Component {
         data: appConfig,
       });
     } catch (e) {
-      console.log(e)
-    } 
-  }
-
-  async getAppConfig() {
-    const labels = [];
-    try {
-      const res = await ipcRenderer.invoke("app:getconf");
-      labels = res.data.labels;
-    } catch (e) {
-      console.log(e)
+      console.log(e);
     }
-    this.setState({
-      labels: labels
-    });
   }
 
   onRlyUpdate(event, rlyState) {
-    const rlyCount = rlyState.relays.length ? rlyState.relays.length : undefined;
+    const rlyCount = rlyState.relays.length
+      ? rlyState.relays.length
+      : undefined;
     this.setState({
       connected: rlyState.connected,
       portConnected: rlyState.port,
@@ -189,7 +196,7 @@ class App extends React.Component {
     try {
       await this.connect();
     } catch (e) {
-      console.log(e)
+      console.log(e);
     }
   }
 
@@ -197,7 +204,7 @@ class App extends React.Component {
     try {
       await this.disconnect();
     } catch (e) {
-      console.log(e)
+      console.log(e);
     }
   }
 
@@ -212,19 +219,18 @@ class App extends React.Component {
     try {
       await ipcRenderer.invoke("relayjs:write", idx, Number(!isOpen));
     } catch (e) {
-      console.log(e)
+      console.log(e);
     }
     this.setState({
       isbusy: false,
     });
   }
 
-  async onClickReconnect(rlyCount){
-    await this.connect({size: rlyCount})
+  async onClickReconnect(rlyCount) {
+    await this.connect({ size: rlyCount });
   }
 
-  async connect({port = undefined, size = undefined} = {}) {
-
+  async connect({ port = undefined, size = undefined } = {}) {
     this.setState({
       loading: true,
     });
@@ -240,7 +246,10 @@ class App extends React.Component {
     }
 
     try {
-      await ipcRenderer.invoke("relayjs:connect", {port: __port, size: __size});
+      await ipcRenderer.invoke("relayjs:connect", {
+        port: __port,
+        size: __size,
+      });
     } catch (e) {
       console.log(e);
       this.setState({
@@ -252,21 +261,19 @@ class App extends React.Component {
 
     this.setState({
       loading: false,
-      rlyCountSelected: __size
+      rlyCountSelected: __size,
     });
-
   }
 
   async disconnect() {
     try {
       await ipcRenderer.invoke("relayjs:disconnect");
     } catch (e) {
-      console.log(e) 
+      console.log(e);
     }
   }
 
   async componentDidMount() {
-
     ipcRenderer.off("usbdetection:update", this.onUsbDetectionUpdate);
     ipcRenderer.off("menu:action", this.onClickMenuItem);
     ipcRenderer.off("port:change", this.onChangeUsbPort);
@@ -278,6 +285,7 @@ class App extends React.Component {
     ipcRenderer.on("relayjs:message", this.onRlyUpdate);
 
     await ipcRenderer.invoke("dom:loaded");
+    await this.openConfig();
     await this.connect();
   }
 
@@ -302,8 +310,6 @@ class App extends React.Component {
           onClickConnect={this.onClickConnect}
           onClickDisconnect={this.onClickDisconnect}
           onChangeLabel={this.onChangeLabel}
-          onOpenFile={this.onOpenFile}
-          onSaveFile={this.onSaveFile}
           onSaveAsFile={this.onSaveAsFile}
           onChangeUsbPort={this.onChangeUsbPort}
           {...this.state}

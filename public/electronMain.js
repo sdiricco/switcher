@@ -108,7 +108,7 @@ ipcMain.handle(
         title: "Save",
         buttonLabel: "Save",
         defaultPath: ".json",
-        filters: [{name: "json", extensions: filters}]
+        filters: [{name: "json", extensions: ["json"]}]
       });
       if (!filePath) {
         return true;
@@ -119,20 +119,29 @@ ipcMain.handle(
   }
 );
 
-ipcMain.handle("app:openconfig", async (event, filter) => {
-  let config = {};
-  const listOfFilePath = dialog.showOpenDialogSync(mainWindow, {
-    properties: ["openFile"],
-    filters: [{name: "json", extensions: ["json"]}]
-  });
-  const filePath = listOfFilePath[0];
-  if (filePath) {
-    config = await backendManager.appGetConfig(filePath);
+ipcMain.handle("app:openconfig", async (event, {openFromExplorer = false} = {}) => {
+  const result = {
+    config: {},
+    path: undefined
   }
-  return {
-    config: config,
-    path: filePath
-  };
+
+  if (openFromExplorer) {
+    const listOfFilePath = dialog.showOpenDialogSync(mainWindow, {
+      properties: ["openFile"],
+      filters: [{name: "json", extensions: ["json"]}]
+    });
+    result.path = listOfFilePath[0];
+  }
+
+  const data = await backendManager.appGetConfig(result.path);
+
+  console.log(data);
+
+  result.config = data.config;
+  result.path = data.path;
+
+  return result;
+
 });
 
 ipcMain.handle("menu:port:update", async (event, devices) =>{

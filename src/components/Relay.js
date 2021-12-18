@@ -5,12 +5,7 @@ import {
   Input,
   Row,
   Col,
-  InputNumber,
-  Button,
-  Divider,
 } from "antd";
-import { CheckOutlined } from "@ant-design/icons";
-import styles from "./Relay.module.css";
 
 class Relay extends React.Component {
   constructor(props) {
@@ -25,7 +20,7 @@ class Relay extends React.Component {
           {this.props.relays.map((relay, idx) => {
             const index = (idx + 1).toString().padStart(2, "0");
             return (
-              <Row gutter={8}>
+              <Row key={`r_${index}`} gutter={8}>
                 <Col className="gutter-row">
                   <Switch
                     checked={relay.value}

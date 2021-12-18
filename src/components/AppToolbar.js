@@ -10,12 +10,11 @@ const MAX_INT = 1000;
 const MIN_INT = 0;
 const MAX_RLY_COUNT = 64;
 const MIN_RLY_COUNT = 1;
-const DEFAULT_RLY_COUNT = 8;
 
 class AppToolbar extends React.Component {
   constructor(props) {
     super(props);
-    const rlyCount = props.rlyCount ? rlyCount : undefined
+    const rlyCount = props.rlyCount ? props.rlyCount : undefined
     this.props = props;
     this.state = {
       rlyCount: rlyCount,
