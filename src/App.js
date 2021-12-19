@@ -93,6 +93,14 @@ class App extends React.Component {
             break;
         }
         break;
+      case "Help":
+        switch (tree[1]) {
+          case "Learn More":
+            console.log("Learn More");
+            break;
+          default:
+            break;
+        }
       default:
         break;
     }

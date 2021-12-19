@@ -131,7 +131,7 @@ function createTemplate(app, window, onClickItem) {
       submenu: [
         {
           label: "Learn More",
-          click: () => onClickItem(["help", "Learn More"]),
+          click: () => onClickItem(["Help", "Learn More"]),
         },
       ],
     },
