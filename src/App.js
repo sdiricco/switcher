@@ -34,6 +34,7 @@ class App extends React.Component {
 
     this.openConfig = this.openConfig.bind(this);
     this.saveConfig = this.saveConfig.bind(this);
+    this.saveAsConfig = this.saveAsConfig.bind(this);
     this.onChangeUsbPort = this.onChangeUsbPort.bind(this);
     this.onChangeLabel = this.onChangeLabel.bind(this);
     this.saveAppConfig = this.saveAppConfig.bind(this);
@@ -63,7 +64,7 @@ class App extends React.Component {
   }
 
   async onUsbDetectionUpdate(event, devices) {
-    await ipcRenderer.invoke("menu:port:update", devices);
+    await electron.menuUpdatePortList(devices);
   }
 
   onClickMenuItem(event, tree) {
@@ -71,13 +72,13 @@ class App extends React.Component {
       case "File":
         switch (tree[1]) {
           case "Open":
-            this.openConfig({ openFromExplorer: true });
+            this.openConfig({openFromExplorer: true});
             break;
           case "Save":
             this.saveConfig();
             break;
           case "Save as..":
-            this.saveConfig({showSaveDialog: true});
+            this.saveAsConfig();
             break;
           default:
             break;
@@ -128,25 +129,39 @@ class App extends React.Component {
     });
   }
 
-  async saveConfig({showSaveDialog = false} = {}) {
+  async saveConfig() {
     const config = {
       labels: this.state.labels,
     };
 
-    await ipcRenderer.invoke("app:saveconfig", {
-      showSaveDialog: showSaveDialog,
-      data: config,
-    });
+    try {
+      await electron.appSaveConfig(config);  
+    } catch (e) {
+      console.log(e)
+    }
+
+  }
+
+  async saveAsConfig() {
+    const config = {
+      labels: this.state.labels,
+    };
+
+    try {
+      await electron.appSaveAsConfig(config);
+    } catch (e) {
+      console.log(e)
+    }
+
   }
 
   onChangeUsbPort(option) {
-    console.log(option);
-
     let portSelected = undefined;
-    if (option === AUTO) {
-    } else {
+
+    if (option !== AUTO) {
       portSelected = option;
-    }
+    } 
+
     this.setState({
       portSelected: portSelected,
     });
@@ -154,9 +169,11 @@ class App extends React.Component {
 
   onChangeLabel(e, idx) {
     let labels = this.state.labels;
+
     if (!labels.length) {
       labels = this.state.relays.map(() => "");
     }
+
     labels[idx] = e.target.value;
 
     this.setState({
@@ -167,23 +184,23 @@ class App extends React.Component {
   }
 
   async saveAppConfig() {
-    const appConfig = {
+    const config = {
       labels: this.state.labels,
     };
+
     try {
-      await ipcRenderer.invoke("app:saveconfig", {
-        showSaveDialog: false,
-        data: appConfig,
-      });
+      await electron.appSaveConfig(config)
     } catch (e) {
       console.log(e);
     }
   }
 
   onRlyUpdate(event, rlyState) {
+
     const rlyCount = rlyState.relays.length
       ? rlyState.relays.length
       : undefined;
+
     this.setState({
       connected: rlyState.connected,
       portConnected: rlyState.port,
@@ -210,15 +227,19 @@ class App extends React.Component {
   }
 
   async onClickSwitch(el, idx) {
+
     if (this.state.isbusy) {
       return;
     }
+
     this.setState({
       isbusy: true,
     });
+
     const isOpen = Boolean(el.state);
+
     try {
-      await ipcRenderer.invoke("relayjs:write", idx, Number(!isOpen));
+      await electron.relayWrite(idx, Number(!isOpen));
     } catch (e) {
       console.log(e);
     }
