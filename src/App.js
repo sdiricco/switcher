@@ -3,7 +3,7 @@ import AppRender from "./AppRender";
 import { Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import "./App.less";
-import electron from "./ElectronServices"; 
+import {appOpenConfig, appSetTitle, appSaveConfig, appSaveAsConfig, menuUpdatePortList, relayWrite} from "./ElectronServices"; 
 
 
 const { ipcRenderer } = window.require("electron");
@@ -64,7 +64,7 @@ class App extends React.Component {
   }
 
   async onUsbDetectionUpdate(event, devices) {
-    await electron.menuUpdatePortList(devices);
+    await menuUpdatePortList(devices);
   }
 
   onClickMenuItem(event, tree) {
@@ -112,7 +112,7 @@ class App extends React.Component {
     let __title = this.state.title;
 
     try {
-      const data = await electron.appOpenConfig({openFromExplorer: openFromExplorer})
+      const data = await appOpenConfig({openFromExplorer: openFromExplorer})
 
       if (data) {
         if (data.config && data.config.labels) {
@@ -124,7 +124,7 @@ class App extends React.Component {
         }
       }
 
-      await electron.appSetTitle(__title);
+      await appSetTitle(__title);
 
     } catch (e) {
       console.log(e);
@@ -143,7 +143,7 @@ class App extends React.Component {
     };
 
     try {
-      await electron.appSaveConfig(config);  
+      await appSaveConfig(config);  
     } catch (e) {
       console.log(e)
     }
@@ -156,7 +156,7 @@ class App extends React.Component {
     };
 
     try {
-      await electron.appSaveAsConfig(config);
+      await appSaveAsConfig(config);
     } catch (e) {
       console.log(e)
     }
@@ -197,7 +197,7 @@ class App extends React.Component {
     };
 
     try {
-      await electron.appSaveConfig(config)
+      await appSaveConfig(config)
     } catch (e) {
       console.log(e);
     }
@@ -247,7 +247,7 @@ class App extends React.Component {
     const isOpen = Boolean(el.state);
 
     try {
-      await electron.relayWrite(idx, Number(!isOpen));
+      await relayWrite(idx, Number(!isOpen));
     } catch (e) {
       console.log(e);
     }

@@ -31,4 +31,4 @@ async function relayWrite(pin = 0, value = 0){
     return await ipcRenderer.invoke("relayjs:write", pin, value);
 }
 
-module.exports = { appOpenConfig, appSetTitle, menuUpdatePortList, appSaveConfig, appSaveAsConfig, relayWrite };
+export { appOpenConfig, appSetTitle, appSaveConfig, appSaveAsConfig, menuUpdatePortList, relayWrite };
