@@ -5,6 +5,7 @@ import {
   DisconnectOutlined,
   SyncOutlined,
 } from "@ant-design/icons";
+import styles from "./AppToolbar.module.css"
 
 const MAX_INT = 1000;
 const MIN_INT = 0;
@@ -14,7 +15,7 @@ const MIN_RLY_COUNT = 1;
 class AppToolbar extends React.Component {
   constructor(props) {
     super(props);
-    const rlyCount = props.rlyCount ? props.rlyCount : undefined
+    const rlyCount = props.rlyCount ? props.rlyCount : undefined;
     this.props = props;
     this.state = {
       rlyCount: rlyCount,
@@ -45,11 +46,11 @@ class AppToolbar extends React.Component {
     this.props.onClickReconnect(this.state.rlyCount);
   }
 
-  componentDidUpdate(prevProps){
+  componentDidUpdate(prevProps) {
     if (prevProps.rlyCount !== this.props.rlyCount) {
       this.setState({
-        rlyCount: this.props.rlyCount
-      })
+        rlyCount: this.props.rlyCount,
+      });
     }
   }
 
@@ -59,7 +60,6 @@ class AppToolbar extends React.Component {
         {!this.props.connected && (
           <Col className="gutter-row">
             <Button
-              className="buttonStyle"
               type="text"
               onClick={this.props.onClickConnect}
             >
@@ -71,7 +71,6 @@ class AppToolbar extends React.Component {
         {this.props.connected && (
           <Col className="gutter-row">
             <Button
-              className="buttonStyle"
               type="text"
               onClick={this.props.onClickDisconnect}
             >
@@ -80,27 +79,30 @@ class AppToolbar extends React.Component {
             </Button>
           </Col>
         )}
-        <div className="verticalDivider"></div>
-        <Col className="gutter-row">
-          <Button
-            className="buttonStyle"
-            type="text"
-            disabled={this.state.errorRlyCount || !this.state.rlyCount}
-            onClick={this.onClickReconnect}
-          >
-            <SyncOutlined />
-          </Button>
-        </Col>
-        <Col className="gutter-row">
-          <InputNumber
-            min={MIN_INT}
-            max={MAX_INT}
-            value={this.state.rlyCount}
-            onChange={this.onChangeRlyCount}
-            style={{
-              color: this.state.errorRlyCount ? "red" : "white",
-            }}
-          />
+        <Col flex="auto" className="gutter-row">
+          <Row className={styles.dxButtonGroup}>
+            <Col className="gutter-row">
+              <Button
+                className="buttonStyle"
+                type="text"
+                disabled={this.state.errorRlyCount || !this.state.rlyCount}
+                onClick={this.onClickReconnect}
+              >
+                <SyncOutlined />
+              </Button>
+            </Col>
+            <Col className="gutter-row">
+              <InputNumber
+                min={MIN_INT}
+                max={MAX_INT}
+                value={this.state.rlyCount}
+                onChange={this.onChangeRlyCount}
+                style={{
+                  color: this.state.errorRlyCount ? "red" : "white",
+                }}
+              />
+            </Col>
+          </Row>
         </Col>
       </Row>
     );

@@ -116,6 +116,7 @@ ipcMain.handle("dom:loaded", async (event, jsonObj) => {
 backendManager.setRlyManagerEvtCbk(sendRlyManagerMessage);
 
 function sendRlyManagerMessage(message) {
+  console.log(message)
   mainWindow.webContents.send("relayjs:message", message);
 }
 

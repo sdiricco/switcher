@@ -44,7 +44,7 @@ class BackendManager {
     }
   }
 
-  __onRlyManagerErr(event, e) {
+  __onRlyManagerErr(e) {
     this.__sendRlyManagerMessageToCbk(e);
   }
 
