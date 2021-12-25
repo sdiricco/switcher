@@ -19,14 +19,7 @@ class AppRender extends React.Component {
 
   render() {
     const showRelays = this.props.connected;
-    const showErrorBox =
-      !this.props.loading &&
-      !this.props.connected &&
-      this.props.eMessage !== "";
-    const showDisconnectedBox =
-      !this.props.loading &&
-      !this.props.connected &&
-      this.props.eMessage === "";
+    const showDisconnectedBox = !this.props.connected
 
     return (
       <Layout className="layout">
@@ -35,7 +28,6 @@ class AppRender extends React.Component {
         </Header>
         <Content className="content">
           {showRelays && <Relay {...this.props} />}
-          {showErrorBox && <AppAlert {...this.props} />}
           {showDisconnectedBox && <AppDisconnected />}
         </Content>
         <Footer className="footer">

@@ -248,7 +248,7 @@ class App extends React.Component {
     try {
       await this.connect();
     } catch (e) {
-      console.log(e);
+      console.log("error ****************", e)
     }
   }
 
@@ -306,9 +306,11 @@ class App extends React.Component {
         size: __size,
       });
     } catch (e) {
-      console.log(e);
+      console.log(e.message);  //Error invoking remote method '[a-zA-Z0-9_:-]*':
+      const error = this.state.error;
+      error.message = e.message.replace(/Error invoking remote method '[a-zA-Z0-9_:-]*':/g, "");
       this.setState({
-        eMessage: e.message,
+        error: error,
         loading: false,
       });
       return;
