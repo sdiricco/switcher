@@ -3,8 +3,14 @@ import AppRender from "./AppRender";
 import { Spin } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import "./App.less";
-import {appOpenConfig, appSetTitle, appSaveConfig, appSaveAsConfig, menuUpdatePortList, relayWrite} from "./ElectronServices"; 
-
+import {
+  appOpenConfig,
+  appSetTitle,
+  appSaveConfig,
+  appSaveAsConfig,
+  menuUpdatePortList,
+  relayWrite,
+} from "./ElectronServices";
 
 const { ipcRenderer } = window.require("electron");
 const path = window.require("path");
@@ -72,7 +78,7 @@ class App extends React.Component {
       case "File":
         switch (tree[1]) {
           case "Open":
-            this.openConfig({openFromExplorer: true});
+            this.openConfig({ openFromExplorer: true });
             break;
           case "Save":
             this.saveConfig();
@@ -112,7 +118,7 @@ class App extends React.Component {
     let __title = this.state.title;
 
     try {
-      const data = await appOpenConfig({openFromExplorer: openFromExplorer})
+      const data = await appOpenConfig({ openFromExplorer: openFromExplorer });
 
       if (data) {
         if (data.config && data.config.labels) {
@@ -124,8 +130,11 @@ class App extends React.Component {
         }
       }
 
-      await appSetTitle(__title);
+      if (openFromExplorer) {
+        await this.connect({ size: __labels.length });
+      }
 
+      await appSetTitle(__title);
     } catch (e) {
       console.log(e);
     }
@@ -134,6 +143,7 @@ class App extends React.Component {
       labels: __labels,
       path: __path,
       title: __title,
+      rlyCountSelected: __labels.length,
     });
   }
 
@@ -143,11 +153,10 @@ class App extends React.Component {
     };
 
     try {
-      await appSaveConfig(config);  
+      await appSaveConfig(config);
     } catch (e) {
-      console.log(e)
+      console.log(e);
     }
-
   }
 
   async saveAsConfig() {
@@ -158,9 +167,8 @@ class App extends React.Component {
     try {
       await appSaveAsConfig(config);
     } catch (e) {
-      console.log(e)
+      console.log(e);
     }
-
   }
 
   onChangeUsbPort(option) {
@@ -168,7 +176,7 @@ class App extends React.Component {
 
     if (option !== AUTO) {
       portSelected = option;
-    } 
+    }
 
     this.setState({
       portSelected: portSelected,
@@ -197,23 +205,28 @@ class App extends React.Component {
     };
 
     try {
-      await appSaveConfig(config)
+      await appSaveConfig(config);
     } catch (e) {
       console.log(e);
     }
   }
 
   onRlyUpdate(event, rlyState) {
-
     const rlyCount = rlyState.relays.length
       ? rlyState.relays.length
       : undefined;
+
+    let labels = this.state.labels
+    if (rlyState.connected) {
+      labels = labels.slice(0, rlyState.relays.length);
+    }
 
     this.setState({
       connected: rlyState.connected,
       portConnected: rlyState.port,
       relays: rlyState.relays,
       rlyCount: rlyCount,
+      labels: labels,
       eMessage: rlyState.errorMessage,
     });
   }
@@ -235,7 +248,6 @@ class App extends React.Component {
   }
 
   async onClickSwitch(el, idx) {
-
     if (this.state.isbusy) {
       return;
     }

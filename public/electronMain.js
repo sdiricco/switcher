@@ -13,41 +13,10 @@ const {} = require("electron");
 const gotTheLock = app.requestSingleInstanceLock();
 const isDev = require("electron-is-dev");
 
-let mainWindow = null;
+let win = null;
 
-if (!gotTheLock) {
-  app.quit();
-} else {
-  app.on("second-instance", (event, commandLine, workingDirectory) => {
-    // Someone tried to run a second instance, we should focus our window.
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) {
-        mainWindow.restore();
-      }
-      mainWindow.focus();
-    }
-  });
-
-  app.on("ready", __createWindow)
-
-  // Quit when all windows are closed.
-  app.on("window-all-closed", function () {
-    // On OS X it is common for applications and their menu bar
-    // to stay active until the user quits explicitly with Cmd + Q
-    if (process.platform !== "darwin") {
-      app.quit();
-    }
-  });
-
-  app.on("activate", function () {
-    // On OS X it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) __createWindow();
-  });
-}
-
-function __createWindow() {
-  mainWindow = new BrowserWindow({
+function createWindow() {
+  win = new BrowserWindow({
     autoHideMenuBar: false,
     minWidth: 400,
     minHeight: 200,
@@ -64,18 +33,18 @@ function __createWindow() {
     ? "http://localhost:3000"
     : `file://${path.join(__dirname, "../build/index.html")}`;
 
-  mainWindow.loadURL(startURL);
+  win.loadURL(startURL);
 
-  mainWindow.removeMenu();
+  win.removeMenu();
 
-  mainWindow.once("ready-to-show", () => {
-    mainWindow.show();
+  win.once("ready-to-show", () => {
+    win.show();
     if (isDev) {
-      mainWindow.toggleDevTools();
+      win.toggleDevTools();
     }
   });
-  mainWindow.on("closed", () => {
-    mainWindow = null;
+  win.on("closed", () => {
+    win = null;
   });
 
   if (isDev) {
@@ -91,6 +60,40 @@ function __createWindow() {
   }
 }
 
+function onSecondInstance(event, commandLine, workingDirectory) {
+  if (!win) {
+    return;
+  }
+  if (win.isMinimized()) {
+    win.restore();
+  }
+  win.focus();
+}
+
+function onWindowAllClosed() {
+  // Quit when all windows are closed.
+  // On OS X it is common for applications and their menu bar
+  // to stay active until the user quits explicitly with Cmd + Q
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
+}
+
+function onActivate(){
+  // On OS X it's common to re-create a window in the app when the
+  // dock icon is clicked and there are no other windows open.
+  if (BrowserWindow.getAllWindows().length === 0) createWindow();
+}
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on("second-instance", onSecondInstance);
+  app.on("ready", createWindow);
+  app.on("window-all-closed", onWindowAllClosed);
+  app.on("activate", onActivate);
+}
+
 const backendManager = new BackendManager({
   appSettingsPath: APP_SETTINGS_PATH,
   appConfigPath: APP_CONFIG_PATH,
@@ -99,13 +102,13 @@ const backendManager = new BackendManager({
 ////////////////////////////////////////// dialog \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 ipcMain.handle("message-box", async (event, options) => {
-  return dialog.showMessageBoxSync(mainWindow, options);
+  return dialog.showMessageBoxSync(win, options);
 });
 
 ////////////////////////////////////////// dom loaded \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 ipcMain.handle("dom:loaded", async (event, jsonObj) => {
-  appMenu.createTemplate(app, mainWindow, onClickMenuItem);
+  appMenu.createTemplate(app, win, onClickMenuItem);
 
   const devices = await backendManager.usbDetectionGetDevices();
   updateMenuPortItems(devices);
@@ -113,12 +116,9 @@ ipcMain.handle("dom:loaded", async (event, jsonObj) => {
 
 ////////////////////////////////////////// handle Relay Manager \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-backendManager.setRlyManagerEvtCbk(sendRlyManagerMessage);
-
-function sendRlyManagerMessage(message) {
-  console.log(message)
-  mainWindow.webContents.send("relayjs:message", message);
-}
+backendManager.on("rlymanager-changes", (message)=>{
+  win.webContents.send("relayjs:message", message);
+})
 
 ipcMain.handle(
   "relayjs:connect",
@@ -156,11 +156,9 @@ ipcMain.handle("relayjs:getrelays", (event, data) => {
 
 ////////////////////////////////////////// handle Usb detection \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-backendManager.setUsbDetectionEvtCbk(sendUsbDetectionMessage);
-
-function sendUsbDetectionMessage(devices) {
-  mainWindow.webContents.send("usbdetection:update", devices);
-}
+backendManager.on("usbdetection-changes", (devices)=>{
+  win.webContents.send("usbdetection:update", devices);
+})
 
 ipcMain.handle("usbdetection:getdevices", async (event, data) => {
   return await backendManager.usbDetectionGetDevices();
@@ -169,13 +167,13 @@ ipcMain.handle("usbdetection:getdevices", async (event, data) => {
 ////////////////////////////////////////// handle menu \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 function onClickMenuItem(tree) {
-  mainWindow.webContents.send("menu:action", tree);
+  win.webContents.send("menu:action", tree);
 }
 
 ////////////////////////////////////////// handle app \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 ipcMain.handle("app:settitle", async (event, title) => {
-  mainWindow.setTitle(title);
+  win.setTitle(title);
 });
 
 ipcMain.handle(
@@ -183,7 +181,7 @@ ipcMain.handle(
   async (event, { showSaveDialog = false, data = {} } = {}) => {
     let filePath = undefined;
     if (showSaveDialog) {
-      filePath = dialog.showSaveDialogSync(mainWindow, {
+      filePath = dialog.showSaveDialogSync(win, {
         title: "Save",
         buttonLabel: "Save",
         defaultPath: ".json",
@@ -207,7 +205,7 @@ ipcMain.handle(
     };
 
     if (openFromExplorer) {
-      const listOfFilePath = dialog.showOpenDialogSync(mainWindow, {
+      const listOfFilePath = dialog.showOpenDialogSync(win, {
         properties: ["openFile"],
         filters: [{ name: "json", extensions: ["json"] }],
       });
@@ -242,7 +240,7 @@ function updateMenuPortItems(devices) {
     };
   });
 
-  appMenu.updateTemplateItem(mainWindow, ["Settings", "Port"], {
+  appMenu.updateTemplateItem(win, ["Settings", "Port"], {
     label: "Port",
     submenu: [
       {
