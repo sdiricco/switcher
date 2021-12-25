@@ -34,6 +34,12 @@ class App extends React.Component {
       labels: [],
       rlyCount: undefined,
       rlyCountSelected: undefined,
+
+      error:{
+        type: undefined,
+        message: undefined,
+        details: undefined,
+      },
     };
 
     this.timeoutId = undefined;
@@ -107,6 +113,7 @@ class App extends React.Component {
           default:
             break;
         }
+        break;
       default:
         break;
     }
@@ -221,6 +228,11 @@ class App extends React.Component {
       labels = labels.slice(0, rlyState.relays.length);
     }
 
+    const error = this.state.error;
+    error.type = rlyState.errorType;
+    error.message = rlyState.errorMessage;
+    error.details = rlyState.errorDetails;
+
     this.setState({
       connected: rlyState.connected,
       portConnected: rlyState.port,
@@ -228,6 +240,7 @@ class App extends React.Component {
       rlyCount: rlyCount,
       labels: labels,
       eMessage: rlyState.errorMessage,
+      error: error,
     });
   }
 

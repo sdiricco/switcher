@@ -1,6 +1,7 @@
 import React from "react";
 import Marquee from "react-fast-marquee";
-import { Alert } from "antd";
+import { Alert, Typography } from "antd";
+import { TextLoop } from 'react-text-loop-next';
 
 class AppFooter extends React.Component {
   constructor(props) {
@@ -16,9 +17,10 @@ class AppFooter extends React.Component {
         banner
         message="Error"
         description={
-          <Marquee pauseOnHover gradient={false}>
-            {this.props.eMessage}
-          </Marquee>
+          <TextLoop mask noWrap={false}>
+            <div>{this.props.error.message}</div>
+            <div>{this.props.error.details}</div>
+          </TextLoop>
         }
         closable
       />
