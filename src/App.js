@@ -24,22 +24,23 @@ class App extends React.Component {
     this.state = {
       title: "Untiled",
       path: "",
+
       connected: false,
+
       portConnected: undefined,
       portSelected: undefined,
+
       loading: false,
-      eMessage: "",
-      relays: [],
       isbusy: false,
-      labels: [],
-      rlyCount: undefined,
+
       rlyCountSelected: undefined,
 
-      error:{
+      error: {
         type: undefined,
         message: undefined,
         details: undefined,
       },
+      relays: [],
     };
 
     this.timeoutId = undefined;
@@ -56,23 +57,9 @@ class App extends React.Component {
     this.onClickReconnect = this.onClickReconnect.bind(this);
     this.onClickConnect = this.onClickConnect.bind(this);
     this.onClickDisconnect = this.onClickDisconnect.bind(this);
-    this.onRlyUpdate = this.onRlyUpdate.bind(this);
+    this.onRlyError = this.onRlyError.bind(this);
     this.onClickMenuItem = this.onClickMenuItem.bind(this);
     this.onUsbDetectionUpdate = this.onUsbDetectionUpdate.bind(this);
-    this.autosave = this.autosave.bind(this);
-  }
-
-  async autosave({ enable = false, time = 1000 } = {}) {
-    if (!enable) {
-      return;
-    }
-
-    if (this.timeoutId) {
-      clearTimeout(this.timeoutId);
-    }
-    this.timeoutId = setTimeout(async () => {
-      await this.saveAppConfig();
-    }, time);
   }
 
   async onUsbDetectionUpdate(event, devices) {
@@ -120,16 +107,18 @@ class App extends React.Component {
   }
 
   async openConfig({ openFromExplorer = false } = {}) {
-    let __labels = this.state.labels;
+    let relays = this.state.relays;
     let __path = this.state.path;
     let __title = this.state.title;
+    let rlyCountSelected = this.state.rlyCountSelected;
 
     try {
       const data = await appOpenConfig({ openFromExplorer: openFromExplorer });
 
       if (data) {
         if (data.config && data.config.labels) {
-          __labels = data.config.labels;
+          rlyCountSelected = data.config.labels.length;
+          //riempi labels
         }
         if (data.path) {
           __path = data.path;
@@ -138,7 +127,7 @@ class App extends React.Component {
       }
 
       if (openFromExplorer) {
-        await this.connect({ size: __labels.length });
+        await this.connect({ size: data.config.length });
       }
 
       await appSetTitle(__title);
@@ -147,16 +136,21 @@ class App extends React.Component {
     }
 
     this.setState({
-      labels: __labels,
       path: __path,
       title: __title,
-      rlyCountSelected: __labels.length,
+      rlyCountSelected: rlyCountSelected,
     });
   }
 
   async saveConfig() {
+    const relaysConfig = this.state.relays.map((el, idx) => {
+      return {
+        type: el.type,
+        label: el.label,
+      };
+    });
     const config = {
-      labels: this.state.labels,
+      relaysConfig: relaysConfig,
     };
 
     try {
@@ -167,8 +161,15 @@ class App extends React.Component {
   }
 
   async saveAsConfig() {
+    const relaysConfig = this.state.relays.map((el, idx) => {
+      return {
+        type: el.type,
+        label: el.label,
+      };
+    });
+
     const config = {
-      labels: this.state.labels,
+      relaysConfig: relaysConfig,
     };
 
     try {
@@ -191,24 +192,25 @@ class App extends React.Component {
   }
 
   onChangeLabel(e, idx) {
-    let labels = this.state.labels;
+    let relays = this.state.relays;
 
-    if (!labels.length) {
-      labels = this.state.relays.map(() => "");
-    }
-
-    labels[idx] = e.target.value;
+    relays[idx].label = e.target.value;
 
     this.setState({
-      labels: labels,
+      relays: relays,
     });
-
-    this.autosave({ enable: false });
   }
 
   async saveAppConfig() {
+    const relaysConfig = this.state.relays.map((el, idx) => {
+      return {
+        type: el.type,
+        label: el.label,
+      };
+    });
+
     const config = {
-      labels: this.state.labels,
+      relaysConfig: relaysConfig,
     };
 
     try {
@@ -218,28 +220,16 @@ class App extends React.Component {
     }
   }
 
-  onRlyUpdate(event, rlyState) {
-    const rlyCount = rlyState.relays.length
-      ? rlyState.relays.length
-      : undefined;
-
-    let labels = this.state.labels
-    if (rlyState.connected) {
-      labels = labels.slice(0, rlyState.relays.length);
-    }
+  onRlyError(event, state) {
+    console.log(state)
 
     const error = this.state.error;
-    error.type = rlyState.errorType;
-    error.message = rlyState.errorMessage;
-    error.details = rlyState.errorDetails;
+    error.type = state.error.type;
+    error.message = state.error.message;
+    error.details = state.error.details;
 
     this.setState({
-      connected: rlyState.connected,
-      portConnected: rlyState.port,
-      relays: rlyState.relays,
-      rlyCount: rlyCount,
-      labels: labels,
-      eMessage: rlyState.errorMessage,
+      connected: state.connected,
       error: error,
     });
   }
@@ -248,7 +238,7 @@ class App extends React.Component {
     try {
       await this.connect();
     } catch (e) {
-      console.log("error ****************", e)
+      console.log(e);
     }
   }
 
@@ -265,19 +255,25 @@ class App extends React.Component {
       return;
     }
 
+    const relays = this.state.relays;
+
     this.setState({
       isbusy: true,
     });
 
     const isOpen = Boolean(el.state);
+    const value = Number(!isOpen);
 
     try {
-      await relayWrite(idx, Number(!isOpen));
+      await relayWrite(idx, value);
+      relays[idx].state = value;
     } catch (e) {
       console.log(e);
     }
+
     this.setState({
       isbusy: false,
+      relays: relays,
     });
   }
 
@@ -290,6 +286,11 @@ class App extends React.Component {
       loading: true,
     });
 
+    const error = this.state.error;
+    let relays = [];
+    let connected = false;
+    let portConnected = undefined;
+
     let __port = this.state.portSelected;
     let __size = this.state.rlyCountSelected;
 
@@ -301,45 +302,66 @@ class App extends React.Component {
     }
 
     try {
-      await ipcRenderer.invoke("relayjs:connect", {
+      const result = await ipcRenderer.invoke("relayjs:connect", {
         port: __port,
         size: __size,
       });
-    } catch (e) {
-      console.log(e.message);  //Error invoking remote method '[a-zA-Z0-9_:-]*':
-      const error = this.state.error;
-      error.message = e.message.replace(/Error invoking remote method '[a-zA-Z0-9_:-]*':/g, "");
-      this.setState({
-        error: error,
-        loading: false,
+
+      connected = result.data.connected;
+      portConnected = result.data.port;
+
+      relays = result.data.relays.map((el, idx) => {
+        const isContained = idx < this.state.relays.length;
+        return {
+          type: el.type,
+          state: el.state,
+          label: isContained ? this.state.relays[idx].label : "",
+        };
       });
+
+      error.type = result.error.type;
+      error.message = result.error.message;
+      error.details = result.error.details;
+
+    } catch (e) {
+      console.log(e);
       return;
     }
 
     this.setState({
       loading: false,
-      rlyCountSelected: __size,
+      rlyCountSelected: relays.length,
+      error: error,
+      relays: relays,
+      connected: connected,
+      portConnected: portConnected,
     });
   }
 
   async disconnect() {
+    let connected = this.state.connected;
     try {
-      await ipcRenderer.invoke("relayjs:disconnect");
+      const result = await ipcRenderer.invoke("relayjs:disconnect");
+      connected = result.data.connected;
     } catch (e) {
       console.log(e);
     }
+
+    this.setState({
+      connected: connected,
+    });
   }
 
   async componentDidMount() {
     ipcRenderer.off("usbdetection:update", this.onUsbDetectionUpdate);
     ipcRenderer.off("menu:action", this.onClickMenuItem);
     ipcRenderer.off("port:change", this.onChangeUsbPort);
-    ipcRenderer.off("relayjs:message", this.onRlyUpdate);
+    ipcRenderer.off("relayjs:error", this.onRlyError);
 
     ipcRenderer.on("usbdetection:update", this.onUsbDetectionUpdate);
     ipcRenderer.on("menu:action", this.onClickMenuItem);
     ipcRenderer.on("port:change", this.onChangeUsbPort);
-    ipcRenderer.on("relayjs:message", this.onRlyUpdate);
+    ipcRenderer.on("relayjs:error", this.onRlyError);
 
     await ipcRenderer.invoke("dom:loaded");
     await this.openConfig();
@@ -348,7 +370,7 @@ class App extends React.Component {
 
   async componentWillUnmount() {
     ipcRenderer.on("port:change", this.onChangeUsbPort);
-    ipcRenderer.off("relayjs-updatestate", this.onRlyUpdate);
+    ipcRenderer.off("relayjs:error", this.onRlyError);
     await this.saveAppConfig();
     await this.disconnect();
   }

@@ -15,15 +15,15 @@ class Relay extends React.Component {
 
   render() {
     return (
-      <Row>
-        <Col className="gutter-row">
+      <Row wrap={false} style={{minWidth: "-webkit-fill-available"}}>
+        < Col className="gutter-row">
           {this.props.relays.map((relay, idx) => {
             const index = (idx + 1).toString().padStart(2, "0");
             return (
-              <Row key={`r_${index}`} gutter={8}>
+              <Row key={`r_${index}`} gutter={8} wrap={false}>
                 <Col className="gutter-row">
                   <Switch
-                    checked={relay.value}
+                    checked={relay.state}
                     disabled={!this.props.connected}
                     onChange={(e) => {
                       this.props.onClickSwitch(relay, idx);
@@ -31,11 +31,12 @@ class Relay extends React.Component {
                   />
                 </Col>
                 <Col className="gutter-row">
-                  <Typography>{index}</Typography>
+                  <code>{index}</code>
                 </Col>
                 <Col className="gutter-row">
                   <Input
-                    value={this.props.labels[idx]}
+                    style={{minWidth: "200px"}}
+                    value={relay.label}
                     placeholder="label"
                     onChange={(e) => {
                       this.props.onChangeLabel(e, idx);

@@ -15,7 +15,7 @@ const MIN_RLY_COUNT = 1;
 class AppToolbar extends React.Component {
   constructor(props) {
     super(props);
-    const rlyCount = props.rlyCount ? props.rlyCount : undefined;
+    const rlyCount = props.rlyCountSelected ? props.rlyCountSelected : undefined;
     this.props = props;
     this.state = {
       rlyCount: rlyCount,
@@ -56,7 +56,7 @@ class AppToolbar extends React.Component {
 
   render() {
     return (
-      <Row>
+      <Row wrap={false}>
         {!this.props.connected && (
           <Col className="gutter-row">
             <Button
@@ -80,7 +80,7 @@ class AppToolbar extends React.Component {
           </Col>
         )}
         <Col flex="auto" className="gutter-row">
-          <Row className={styles.dxButtonGroup}>
+          <Row className={styles.dxButtonGroup} wrap={false}>
             <Col className="gutter-row">
               <Button
                 className="buttonStyle"
@@ -88,7 +88,7 @@ class AppToolbar extends React.Component {
                 disabled={this.state.errorRlyCount || !this.state.rlyCount}
                 onClick={this.onClickReconnect}
               >
-                <SyncOutlined />
+                <SyncOutlined /> Update relay count
               </Button>
             </Col>
             <Col className="gutter-row">

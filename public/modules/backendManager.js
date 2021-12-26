@@ -6,26 +6,30 @@ const { existsFile, loadJSON, saveJSON, getUsbDevices } = require("./utils");
 class BackendManager extends EventEmitter {
   constructor({ appSettingsPath = undefined, appConfigPath = undefined } = {}) {
     super();
-    
+
     this.appSettingsPath = appSettingsPath;
     this.appConfigPath = appConfigPath;
 
-    this.__onRlyChanges = this.__onRlyChanges.bind(this);
+    this.__errorWrapper = this.__errorWrapper.bind(this);
     this.rlyManagerConnect = this.rlyManagerConnect.bind(this);
     this.rlyManagerDisconnect = this.rlyManagerDisconnect.bind(this);
     this.rlyManagerWrite = this.rlyManagerWrite.bind(this);
-    this.rlyManagerGetState = this.rlyManagerGetState.bind(this);
     this.rlyManagerGetRelay = this.rlyManagerGetRelay.bind(this);
     this.rlyManagerGetRelays = this.rlyManagerGetRelays.bind(this);
 
     this.__onUsbDetectionChange = this.__onUsbDetectionChange.bind(this);
 
-
     this.relayjs = new RelayJs();
     usbDetect.startMonitoring();
 
+    this.relayjs.on("error", (e) => {
+      console.log(e)
+      this.emit("rlymanager:error", {
+        error: e,
+        connected: this.relayjs.connected,
+      });
+    });
 
-    this.relayjs.on("error", this.__onRlyChanges);
     usbDetect.on("change", this.__onUsbDetectionChange);
   }
 
@@ -39,17 +43,24 @@ class BackendManager extends EventEmitter {
     this.emit("usbdetection-changes", devices);
   }
 
-  __onRlyChanges(e) {
-    const rlyMessage = {
-      connected: this.relayjs.connected,
-      port: this.relayjs.port,
-      relays: this.relayjs.relays,
-      error: e ? true : false,
-      errorType: e ? e.type : "",
-      errorMessage: e ? e.message : "",
-      errorDetails: e ? e.details : "",
+  async __errorWrapper(promise) {
+    const result = {
+      success: false,
+      data: undefined,
+      error: {
+        type: undefined,
+        message: undefined,
+        details: undefined,
+      },
     };
-    this.emit("rlymanager-changes", rlyMessage);
+    try {
+      result.data = await promise;
+      result.success = true;
+    } catch (e) {
+      result.success = false;
+      result.error.message = e.message;
+    }
+    return result;
   }
 
   async rlyManagerConnect({
@@ -57,52 +68,57 @@ class BackendManager extends EventEmitter {
     size = undefined,
     options = undefined,
   } = {}) {
-    let result = false;
+    let result = undefined;
+
     try {
-      result = await this.relayjs.connect({
+      const promise = this.relayjs.connect({
         port: port,
         size: size,
         options: options,
       });
-      this.__onRlyChanges();
+
+      result = await this.__errorWrapper(promise);
+
     } catch (e) {
       throw e;
     }
+    result.data = {
+      connected: this.relayjs.connected,
+      relays: this.relayjs.relays,
+      port: this.relayjs.port,
+    };
     return result;
   }
 
   async rlyManagerDisconnect() {
-    let result = false;
+    let result = undefined;
+
     try {
-      result = await this.relayjs.disconnect();
-      this.__onRlyChanges();
+      const promise = this.relayjs.disconnect();
+
+      result = await this.__errorWrapper(promise);
+
     } catch (e) {
       throw e;
+    }
+
+    result.data = {
+      connected: this.relayjs.connected,
     }
     return result;
   }
 
   async rlyManagerWrite(relay, value) {
-    let result = false;
+    let result = undefined;
+
     try {
-      result = await this.relayjs.write(relay, value);
-      this.__onRlyChanges();
+      const promise = this.relayjs.write(relay, value);
+      result = this.__errorWrapper(promise);
     } catch (e) {
       throw e;
     }
-    return result;
-  }
 
-  rlyManagerGetState() {
-    return {
-      connected: this.relayjs.connected,
-      port: this.relayjs.port,
-      relays: this.relayjs.relays,
-      error: undefined,
-      errorType: undefined,
-      errorMessage: undefined,
-      errorDetails: undefined,
-    };
+    return result;
   }
 
   rlyManagerGetRelay(relay) {

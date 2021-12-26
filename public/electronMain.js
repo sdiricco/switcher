@@ -47,6 +47,16 @@ function createWindow() {
     win = null;
   });
 
+  win.on("close", (e) => {
+    const idx = dialog.showMessageBoxSync(win, {
+      message: "The app will be closed",
+      buttons: ["Ok", "Cancel"],
+    });
+    if (idx === 1) {
+      e.preventDefault();
+    }
+  });
+
   if (isDev) {
     const {
       default: installExtension,
@@ -79,7 +89,7 @@ function onWindowAllClosed() {
   }
 }
 
-function onActivate(){
+function onActivate() {
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -116,9 +126,9 @@ ipcMain.handle("dom:loaded", async (event, jsonObj) => {
 
 ////////////////////////////////////////// handle Relay Manager \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-backendManager.on("rlymanager-changes", (message)=>{
-  win.webContents.send("relayjs:message", message);
-})
+backendManager.on("rlymanager:error", (message) => {
+  win.webContents.send("relayjs:error", message);
+});
 
 ipcMain.handle(
   "relayjs:connect",
@@ -156,9 +166,9 @@ ipcMain.handle("relayjs:getrelays", (event, data) => {
 
 ////////////////////////////////////////// handle Usb detection \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-backendManager.on("usbdetection-changes", (devices)=>{
+backendManager.on("usbdetection-changes", (devices) => {
   win.webContents.send("usbdetection:update", devices);
-})
+});
 
 ipcMain.handle("usbdetection:getdevices", async (event, data) => {
   return await backendManager.usbDetectionGetDevices();
