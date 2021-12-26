@@ -1,0 +1,37 @@
+<mxfile host="app.diagrams.net" modified="2021-12-26T13:05:10.919Z" agent="5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36" etag="NZU4BhYP5ph_TX--xIGS" version="16.1.0" type="github">
+  <diagram id="hedpUm_DLuIllqZTHTGd" name="Page-1">
+    <mxGraphModel dx="981" dy="510" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="IDZf0VS9myPSJrDQOnsL-12" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="80" y="520" width="680" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="IDZf0VS9myPSJrDQOnsL-16" value="frontend" style="swimlane;strokeWidth=2;fillColor=none;rounded=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="720" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="IDZf0VS9myPSJrDQOnsL-17" value="electron" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;rounded=1;strokeWidth=2;fillColor=#76608a;strokeColor=#432D57;fontColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="180" y="360" width="440" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="IDZf0VS9myPSJrDQOnsL-33" value="ipc.invoke(&quot;message&quot;, data)" style="shape=flexArrow;endArrow=none;html=1;rounded=0;exitX=0.773;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;startArrow=block;endFill=0;fontFamily=Courier New;fontSize=8;curved=1;" edge="1" parent="1" source="IDZf0VS9myPSJrDQOnsL-17">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="500" y="360" as="sourcePoint" />
+            <mxPoint x="520" y="240" as="targetPoint" />
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="IDZf0VS9myPSJrDQOnsL-34" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;exitX=0.227;exitY=0;exitDx=0;exitDy=0;exitPerimeter=0;curved=1;" edge="1" parent="1" source="IDZf0VS9myPSJrDQOnsL-17">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="360.52" y="360.36" as="sourcePoint" />
+            <mxPoint x="280" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="IDZf0VS9myPSJrDQOnsL-35" value="webWindow.send(&quot;message&quot;, data)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontFamily=Courier New;fontSize=8;" vertex="1" connectable="0" parent="IDZf0VS9myPSJrDQOnsL-34">
+          <mxGeometry x="-0.2011" y="-3" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
