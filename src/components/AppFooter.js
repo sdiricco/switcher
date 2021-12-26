@@ -27,7 +27,7 @@ class AppFooter extends React.Component {
               <ExclamationCircleFilled style={{ color: "#a61d24" }} />
             </Col>
             <Col className="gutter-row">
-            <TextLoop noWrap>
+            <TextLoop noWrap mask>
               <div>{this.props.error.message}</div>
               <div>{this.props.error.details}</div>
             </TextLoop>

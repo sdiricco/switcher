@@ -21,14 +21,16 @@
   width: 100vw;
   margin: 0px;
   padding: 0px;
+  overflow-x: auto;
 }
+
 
 .header {
   background-color: #161b22;
   margin: 0px;
   padding: 6px 6px;
   height: fit-content;
-  min-width: fit-content;
+  min-width: 400px;
 }
 
 
@@ -36,18 +38,22 @@
   background-color: #161b22;
   margin: 0px;
   padding: 4px;
-  min-width: fit-content;
+  min-width: 400px;
 }
 
 .content {
-  padding-top: 8px;
-  padding-bottom: 8px;
   overflow-y: auto;
-  overflow-x: auto;
+  overflow-x: hidden;
   display: grid;
   align-items: center;
-  justify-content: center;
+  min-width: 400px;
 }
+
+
+.relayContainer{
+  padding: 16px;
+}
+
 
 .alert {
   max-width: 400px;
@@ -62,21 +68,24 @@
 .buttonStyle{
   padding: 0px 8px;
 }
-
 ::-webkit-scrollbar {
-  width: 16px;
+  width: 14px;  
+  height: 14px;
+  margin:4px ;
 }
 
+
 ::-webkit-scrollbar-track {
-  border-left: 1px solid #222222;
-  border-right: 1px solid #222222;
+  box-shadow: inset 0px 0px 10px 10px rgba(22, 27, 34, 0.5);
+  border: solid 2px transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #161b22;
-  border: 1px solid #222222;
+  box-shadow: inset 0 0 10px 10px #161b22;
+  border: solid 2px transparent;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #161b22;
+  box-shadow: inset 0 0 10px 10px #161b22;
+  border: solid 2px transparent;
 }

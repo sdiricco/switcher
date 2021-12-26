@@ -15,7 +15,7 @@ class Relay extends React.Component {
 
   render() {
     return (
-      <Row wrap={false} style={{minWidth: "-webkit-fill-available"}}>
+      <Row wrap={false} justify="center" className="relayContainer">
         < Col className="gutter-row">
           {this.props.relays.map((relay, idx) => {
             const index = (idx + 1).toString().padStart(2, "0");

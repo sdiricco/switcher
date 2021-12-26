@@ -18,7 +18,7 @@ let win = null;
 function createWindow() {
   win = new BrowserWindow({
     autoHideMenuBar: false,
-    minWidth: 400,
+    minWidth: 200,
     minHeight: 200,
     show: true,
     title: "Relay App",
