@@ -41,6 +41,7 @@ class App extends React.Component {
         details: undefined,
       },
       relays: [],
+      relaysConfig: []
     };
 
     this.timeoutId = undefined;
@@ -108,6 +109,7 @@ class App extends React.Component {
 
   async openConfig({ openFromExplorer = false } = {}) {
     let relays = this.state.relays;
+    let relaysConfig = this.state.relaysConfig;
     let __path = this.state.path;
     let __title = this.state.title;
     let rlyCountSelected = this.state.rlyCountSelected;
@@ -116,15 +118,17 @@ class App extends React.Component {
       const data = await appOpenConfig({ openFromExplorer: openFromExplorer });
 
       if (data) {
-        if (data.config && data.config.labels) {
-          rlyCountSelected = data.config.labels.length;
-          //riempi labels
+        if (data.config && data.config.relaysConfig) {
+          rlyCountSelected = data.config.relaysConfig.length;
+          relaysConfig = data.config.relaysConfig;
         }
         if (data.path) {
           __path = data.path;
           __title = path.parse(data.path).base;
         }
       }
+
+      console.log(data)
 
       if (openFromExplorer) {
         await this.connect({ size: data.config.length });
@@ -136,9 +140,11 @@ class App extends React.Component {
     }
 
     this.setState({
+      relaysConfig: relaysConfig,
       path: __path,
       title: __title,
       rlyCountSelected: rlyCountSelected,
+      relays: relays
     });
   }
 

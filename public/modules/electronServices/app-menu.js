@@ -111,11 +111,6 @@ function createTemplate(app, window, onClickItem) {
       label: "Settings",
       submenu: [
         {
-          type: "checkbox",
-          label: "Autosave",
-          checked: true,
-        },
-        {
           label: "Port",
           submenu: [
             {

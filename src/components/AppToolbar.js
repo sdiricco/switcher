@@ -47,9 +47,9 @@ class AppToolbar extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    if (prevProps.rlyCount !== this.props.rlyCount) {
+    if (prevProps.rlyCountSelected !== this.props.rlyCountSelected) {
       this.setState({
-        rlyCount: this.props.rlyCount,
+        rlyCount: this.props.rlyCountSelected,
       });
     }
   }
@@ -60,6 +60,7 @@ class AppToolbar extends React.Component {
         {!this.props.connected && (
           <Col className="gutter-row">
             <Button
+              className="buttonStyle"
               type="text"
               onClick={this.props.onClickConnect}
             >
@@ -71,6 +72,7 @@ class AppToolbar extends React.Component {
         {this.props.connected && (
           <Col className="gutter-row">
             <Button
+              className="buttonStyle"
               type="text"
               onClick={this.props.onClickDisconnect}
             >
